@@ -162,6 +162,11 @@ See documentation for more details on configuring database connections.
         next();
       });
 
+      // Health check endpoint
+      app.get("/healthz", (req, res) => {
+        res.status(200).send("OK");
+      });
+
       // Main endpoint for streamable HTTP transport
       app.post("/message", async (req, res) => {
         try {
