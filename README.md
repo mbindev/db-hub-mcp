@@ -93,7 +93,6 @@ docker run --rm --init \
    --demo
 ```
 
-
 ### NPM
 
 ```bash
@@ -169,17 +168,30 @@ Check https://docs.anthropic.com/en/docs/claude-code/mcp
 
 ## Usage
 
+### Read-only Mode
+
+You can run DBHub in read-only mode, which restricts SQL query execution to read-only operations:
+
+```bash
+# Enable read-only mode
+npx @bytebase/dbhub --readonly --dsn "postgres://user:password@localhost:5432/dbname"
+```
+
+In read-only mode, only [readonly SQL operations](https://github.com/bytebase/dbhub/blob/main/src/utils/allowed-keywords.ts) are allowed.
+
+This provides an additional layer of security when connecting to production databases.
+
 ### SSL Connections
 
 You can specify the SSL mode using the `sslmode` parameter in your DSN string:
 
-| Database   | `sslmode=disable` | `sslmode=require` |      Default SSL Behavior      |
-| ---------- | :---------------: | :---------------: | :----------------------------: |
-| PostgreSQL |        ✅         |        ✅         |    Certificate verification    |
-| MySQL      |        ✅         |        ✅         |    Certificate verification    |
-| MariaDB    |        ✅         |        ✅         |    Certificate verification    |
-| SQL Server |        ✅         |        ✅         |    Certificate verification    |
-| SQLite     |        ❌         |        ❌         |        N/A (file-based)        |
+| Database   | `sslmode=disable` | `sslmode=require` |   Default SSL Behavior   |
+| ---------- | :---------------: | :---------------: | :----------------------: |
+| PostgreSQL |        ✅         |        ✅         | Certificate verification |
+| MySQL      |        ✅         |        ✅         | Certificate verification |
+| MariaDB    |        ✅         |        ✅         | Certificate verification |
+| SQL Server |        ✅         |        ✅         | Certificate verification |
+| SQLite     |        ❌         |        ❌         |     N/A (file-based)     |
 
 **SSL Mode Options:**
 
@@ -201,18 +213,52 @@ postgres://user:password@localhost:5432/dbname?sslmode=require
 postgres://user:password@localhost:5432/dbname
 ```
 
-### Read-only Mode
+### SSH Tunnel Support
 
-You can run DBHub in read-only mode, which restricts SQL query execution to read-only operations:
+DBHub supports connecting to databases through SSH tunnels, enabling secure access to databases in private networks or behind firewalls.
+
+#### SSH with Password Authentication
 
 ```bash
-# Enable read-only mode
-npx @bytebase/dbhub --readonly --dsn "postgres://user:password@localhost:5432/dbname"
+npx @bytebase/dbhub \
+  --dsn "postgres://dbuser:dbpass@database.internal:5432/mydb" \
+  --ssh-host bastion.example.com \
+  --ssh-user ubuntu \
+  --ssh-password mypassword
 ```
 
-In read-only mode, only [readonly SQL operations](https://github.com/bytebase/dbhub/blob/main/src/utils/allowed-keywords.ts) are allowed.
+#### SSH with Private Key Authentication
 
-This provides an additional layer of security when connecting to production databases.
+```bash
+npx @bytebase/dbhub \
+  --dsn "postgres://dbuser:dbpass@database.internal:5432/mydb" \
+  --ssh-host bastion.example.com \
+  --ssh-user ubuntu \
+  --ssh-key ~/.ssh/id_rsa
+```
+
+#### SSH with Private Key and Passphrase
+
+```bash
+npx @bytebase/dbhub \
+  --dsn "postgres://dbuser:dbpass@database.internal:5432/mydb" \
+  --ssh-host bastion.example.com \
+  --ssh-port 2222 \
+  --ssh-user ubuntu \
+  --ssh-key ~/.ssh/id_rsa \
+  --ssh-passphrase mykeypassphrase
+```
+
+#### Using Environment Variables
+
+```bash
+export SSH_HOST=bastion.example.com
+export SSH_USER=ubuntu
+export SSH_KEY=~/.ssh/id_rsa
+npx @bytebase/dbhub --dsn "postgres://dbuser:dbpass@database.internal:5432/mydb"
+```
+
+**Note**: When using SSH tunnels, the database host in your DSN should be the hostname/IP as seen from the SSH server (bastion host), not from your local machine.
 
 ### Configure your database connection
 
@@ -252,14 +298,13 @@ For real databases, a Database Source Name (DSN) is required. You can provide th
 
 DBHub supports the following database connection string formats:
 
-| Database   | DSN Format                                                | Example                                                                                                        |
-| ---------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| MySQL      | `mysql://[user]:[password]@[host]:[port]/[database]`      | `mysql://user:password@localhost:3306/dbname?sslmode=disable`                                                  |
-| MariaDB    | `mariadb://[user]:[password]@[host]:[port]/[database]`    | `mariadb://user:password@localhost:3306/dbname?sslmode=disable`                                                |
-| PostgreSQL | `postgres://[user]:[password]@[host]:[port]/[database]`   | `postgres://user:password@localhost:5432/dbname?sslmode=disable`                                               |
-| SQL Server | `sqlserver://[user]:[password]@[host]:[port]/[database]`  | `sqlserver://user:password@localhost:1433/dbname?sslmode=disable`                                              |
-| SQLite     | `sqlite:///[path/to/file]` or `sqlite:///:memory:`        | `sqlite:///path/to/database.db`, `sqlite:C:/Users/YourName/data/database.db (windows)` or `sqlite:///:memory:` |
-
+| Database   | DSN Format                                               | Example                                                                                                        |
+| ---------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| MySQL      | `mysql://[user]:[password]@[host]:[port]/[database]`     | `mysql://user:password@localhost:3306/dbname?sslmode=disable`                                                  |
+| MariaDB    | `mariadb://[user]:[password]@[host]:[port]/[database]`   | `mariadb://user:password@localhost:3306/dbname?sslmode=disable`                                                |
+| PostgreSQL | `postgres://[user]:[password]@[host]:[port]/[database]`  | `postgres://user:password@localhost:5432/dbname?sslmode=disable`                                               |
+| SQL Server | `sqlserver://[user]:[password]@[host]:[port]/[database]` | `sqlserver://user:password@localhost:1433/dbname?sslmode=disable`                                              |
+| SQLite     | `sqlite:///[path/to/file]` or `sqlite:///:memory:`       | `sqlite:///path/to/database.db`, `sqlite:C:/Users/YourName/data/database.db (windows)` or `sqlite:///:memory:` |
 
 #### SQL Server
 
@@ -284,13 +329,19 @@ Extra query parameters:
 
 ### Command line options
 
-| Option    | Environment Variable | Description                                                      | Default                      |
-| --------- | -------------------- | ---------------------------------------------------------------- | ---------------------------- |
-| dsn       | `DSN`                | Database connection string                                       | Required if not in demo mode |
-| transport | `TRANSPORT`          | Transport mode: `stdio` or `http`                                | `stdio`                      |
-| port      | `PORT`               | HTTP server port (only applicable when using `--transport=http`) | `8080`                       |
-| readonly  | `READONLY`           | Restrict SQL execution to read-only operations                   | `false`                      |
-| demo      | N/A                  | Run in demo mode with sample employee database                   | `false`                      |
+| Option         | Environment Variable | Description                                                      | Default                      |
+| -------------- | -------------------- | ---------------------------------------------------------------- | ---------------------------- |
+| dsn            | `DSN`                | Database connection string                                       | Required if not in demo mode |
+| transport      | `TRANSPORT`          | Transport mode: `stdio` or `http`                                | `stdio`                      |
+| port           | `PORT`               | HTTP server port (only applicable when using `--transport=http`) | `8080`                       |
+| readonly       | `READONLY`           | Restrict SQL execution to read-only operations                   | `false`                      |
+| demo           | N/A                  | Run in demo mode with sample employee database                   | `false`                      |
+| ssh-host       | `SSH_HOST`           | SSH server hostname for tunnel connection                        | N/A                          |
+| ssh-port       | `SSH_PORT`           | SSH server port                                                  | `22`                         |
+| ssh-user       | `SSH_USER`           | SSH username                                                     | N/A                          |
+| ssh-password   | `SSH_PASSWORD`       | SSH password (for password authentication)                       | N/A                          |
+| ssh-key        | `SSH_KEY`            | Path to SSH private key file                                     | N/A                          |
+| ssh-passphrase | `SSH_PASSPHRASE`     | Passphrase for SSH private key                                   | N/A                          |
 
 The demo mode uses an in-memory SQLite database loaded with the [sample employee database](https://github.com/bytebase/dbhub/tree/main/resources/employee-sqlite) that includes tables for employees, departments, titles, salaries, department employees, and department managers. The sample database includes SQL scripts for table creation, data loading, and testing.
 
@@ -386,7 +437,6 @@ docker pull mcr.microsoft.com/mssql/server:2019-latest
 - SQL Server containers require significant startup time (3-5 minutes)
 - Ensure Docker has sufficient memory allocated (4GB+ recommended)
 - Consider running SQL Server tests separately if experiencing timeouts
-
 
 **Network/Resource Issues:**
 

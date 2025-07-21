@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import type { SSHTunnelConfig } from "../types/ssh.js";
 
 // Create __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -211,4 +212,100 @@ export function redactDSN(dsn: string): string {
     // If parsing fails, do basic redaction with regex
     return dsn.replace(/\/\/([^:]+):([^@]+)@/, "//$1:***@");
   }
+}
+
+/**
+ * Resolve SSH tunnel configuration from command line args or environment variables
+ * Returns SSH config or null if no SSH options are provided
+ */
+export function resolveSSHConfig(): { config: SSHTunnelConfig; source: string } | null {
+  // Get command line arguments
+  const args = parseCommandLineArgs();
+
+  // Check if any SSH options are provided
+  const hasSSHArgs = args["ssh-host"] || process.env.SSH_HOST;
+  if (!hasSSHArgs) {
+    return null;
+  }
+
+  // Build SSH config from command line and environment variables
+  const config: Partial<SSHTunnelConfig> = {};
+  let sources: string[] = [];
+
+  // SSH Host (required)
+  if (args["ssh-host"]) {
+    config.host = args["ssh-host"];
+    sources.push("ssh-host from command line");
+  } else if (process.env.SSH_HOST) {
+    config.host = process.env.SSH_HOST;
+    sources.push("SSH_HOST from environment");
+  }
+
+  // SSH Port (optional, default: 22)
+  if (args["ssh-port"]) {
+    config.port = parseInt(args["ssh-port"], 10);
+    sources.push("ssh-port from command line");
+  } else if (process.env.SSH_PORT) {
+    config.port = parseInt(process.env.SSH_PORT, 10);
+    sources.push("SSH_PORT from environment");
+  }
+
+  // SSH User (required)
+  if (args["ssh-user"]) {
+    config.username = args["ssh-user"];
+    sources.push("ssh-user from command line");
+  } else if (process.env.SSH_USER) {
+    config.username = process.env.SSH_USER;
+    sources.push("SSH_USER from environment");
+  }
+
+  // SSH Password (optional)
+  if (args["ssh-password"]) {
+    config.password = args["ssh-password"];
+    sources.push("ssh-password from command line");
+  } else if (process.env.SSH_PASSWORD) {
+    config.password = process.env.SSH_PASSWORD;
+    sources.push("SSH_PASSWORD from environment");
+  }
+
+  // SSH Private Key (optional)
+  if (args["ssh-key"]) {
+    config.privateKey = args["ssh-key"];
+    // Expand ~ to home directory
+    if (config.privateKey.startsWith("~/")) {
+      config.privateKey = path.join(process.env.HOME || "", config.privateKey.substring(2));
+    }
+    sources.push("ssh-key from command line");
+  } else if (process.env.SSH_KEY) {
+    config.privateKey = process.env.SSH_KEY;
+    // Expand ~ to home directory
+    if (config.privateKey.startsWith("~/")) {
+      config.privateKey = path.join(process.env.HOME || "", config.privateKey.substring(2));
+    }
+    sources.push("SSH_KEY from environment");
+  }
+
+  // SSH Key Passphrase (optional)
+  if (args["ssh-passphrase"]) {
+    config.passphrase = args["ssh-passphrase"];
+    sources.push("ssh-passphrase from command line");
+  } else if (process.env.SSH_PASSPHRASE) {
+    config.passphrase = process.env.SSH_PASSPHRASE;
+    sources.push("SSH_PASSPHRASE from environment");
+  }
+
+  // Validate required fields
+  if (!config.host || !config.username) {
+    throw new Error("SSH tunnel configuration requires at least --ssh-host and --ssh-user");
+  }
+
+  // Validate authentication method
+  if (!config.password && !config.privateKey) {
+    throw new Error("SSH tunnel configuration requires either --ssh-password or --ssh-key for authentication");
+  }
+
+  return {
+    config: config as SSHTunnelConfig,
+    source: sources.join(", ")
+  };
 }

@@ -1,4 +1,7 @@
 import { Connector, ConnectorType, ConnectorRegistry } from "./interface.js";
+import { SSHTunnel } from "../utils/ssh-tunnel.js";
+import { resolveSSHConfig } from "../config/env.js";
+import type { SSHTunnelConfig } from "../types/ssh.js";
 
 // Singleton instance for global access
 let managerInstance: ConnectorManager | null = null;
@@ -9,6 +12,8 @@ let managerInstance: ConnectorManager | null = null;
 export class ConnectorManager {
   private activeConnector: Connector | null = null;
   private connected = false;
+  private sshTunnel: SSHTunnel | null = null;
+  private originalDSN: string | null = null;
 
   constructor() {
     if (!managerInstance) {
@@ -20,17 +25,47 @@ export class ConnectorManager {
    * Initialize and connect to the database using a DSN
    */
   async connectWithDSN(dsn: string, initScript?: string): Promise<void> {
+    // Store original DSN for reference
+    this.originalDSN = dsn;
+    
+    // Check if SSH tunnel is needed
+    const sshConfig = resolveSSHConfig();
+    let actualDSN = dsn;
+    
+    if (sshConfig) {
+      console.error(`SSH tunnel configuration loaded from ${sshConfig.source}`);
+      
+      // Parse DSN to get database host and port
+      const url = new URL(dsn);
+      const targetHost = url.hostname;
+      const targetPort = parseInt(url.port) || this.getDefaultPort(dsn);
+      
+      // Create and establish SSH tunnel
+      this.sshTunnel = new SSHTunnel();
+      const tunnelInfo = await this.sshTunnel.establish(sshConfig.config, {
+        targetHost,
+        targetPort,
+      });
+      
+      // Update DSN to use local tunnel endpoint
+      url.hostname = '127.0.0.1';
+      url.port = tunnelInfo.localPort.toString();
+      actualDSN = url.toString();
+      
+      console.error(`Database connection will use SSH tunnel through localhost:${tunnelInfo.localPort}`);
+    }
+
     // First try to find a connector that can handle this DSN
-    let connector = ConnectorRegistry.getConnectorForDSN(dsn);
+    let connector = ConnectorRegistry.getConnectorForDSN(actualDSN);
 
     if (!connector) {
-      throw new Error(`No connector found that can handle the DSN: ${dsn}`);
+      throw new Error(`No connector found that can handle the DSN: ${actualDSN}`);
     }
 
     this.activeConnector = connector;
 
-    // Connect to the database
-    await this.activeConnector.connect(dsn, initScript);
+    // Connect to the database through tunnel if applicable
+    await this.activeConnector.connect(actualDSN, initScript);
     this.connected = true;
   }
 
@@ -63,6 +98,14 @@ export class ConnectorManager {
       await this.activeConnector.disconnect();
       this.connected = false;
     }
+    
+    // Close SSH tunnel if it exists
+    if (this.sshTunnel) {
+      await this.sshTunnel.close();
+      this.sshTunnel = null;
+    }
+    
+    this.originalDSN = null;
   }
 
   /**
@@ -105,5 +148,22 @@ export class ConnectorManager {
       throw new Error("ConnectorManager not initialized");
     }
     return managerInstance.getConnector();
+  }
+  
+  /**
+   * Get default port for a database based on DSN protocol
+   */
+  private getDefaultPort(dsn: string): number {
+    if (dsn.startsWith('postgres://') || dsn.startsWith('postgresql://')) {
+      return 5432;
+    } else if (dsn.startsWith('mysql://')) {
+      return 3306;
+    } else if (dsn.startsWith('mariadb://')) {
+      return 3306;
+    } else if (dsn.startsWith('sqlserver://')) {
+      return 1433;
+    }
+    // SQLite doesn't use ports
+    return 0;
   }
 }

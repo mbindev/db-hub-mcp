@@ -1,3 +1,5 @@
+import type { SSHTunnelConfig } from '../types/ssh.js';
+
 /**
  * Obfuscates the password in a DSN string for logging purposes
  * @param dsn The original DSN string
@@ -54,4 +56,31 @@ export function obfuscateDSNPassword(dsn: string): string {
     // This ensures we don't break functionality due to obfuscation issues
     return dsn;
   }
+}
+
+/**
+ * Obfuscates sensitive information in SSH configuration for logging
+ * @param config The SSH tunnel configuration
+ * @returns SSH config with sensitive data replaced by asterisks
+ */
+export function obfuscateSSHConfig(config: SSHTunnelConfig): Partial<SSHTunnelConfig> {
+  const obfuscated: Partial<SSHTunnelConfig> = {
+    host: config.host,
+    port: config.port,
+    username: config.username,
+  };
+  
+  if (config.password) {
+    obfuscated.password = '*'.repeat(8);
+  }
+  
+  if (config.privateKey) {
+    obfuscated.privateKey = config.privateKey; // Keep path as-is
+  }
+  
+  if (config.passphrase) {
+    obfuscated.passphrase = '*'.repeat(8);
+  }
+  
+  return obfuscated;
 }

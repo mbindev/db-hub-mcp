@@ -35,6 +35,9 @@ importers:
       pg:
         specifier: ^8.13.3
         version: 8.16.0
+      ssh2:
+        specifier: ^1.16.0
+        version: 1.16.0
       zod:
         specifier: ^3.24.2
         version: 3.25.64
@@ -66,6 +69,9 @@ importers:
       '@types/pg':
         specifier: ^8.11.11
         version: 8.15.4
+      '@types/ssh2':
+        specifier: ^1.15.5
+        version: 1.15.5
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3

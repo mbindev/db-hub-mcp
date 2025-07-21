@@ -83,6 +83,18 @@ Key architectural patterns:
 - All connectors have comprehensive integration test coverage
 - Pre-commit hooks run related tests automatically
 - Test specific databases: `pnpm test src/connectors/__tests__/{db-type}.integration.test.ts`
+- SSH tunnel tests: `pnpm test postgres-ssh-simple.integration.test.ts`
+
+## SSH Tunnel Support
+
+DBHub supports SSH tunnels for secure database connections through bastion hosts:
+
+- Configuration via command-line options: `--ssh-host`, `--ssh-port`, `--ssh-user`, `--ssh-password`, `--ssh-key`, `--ssh-passphrase`
+- Configuration via environment variables: `SSH_HOST`, `SSH_PORT`, `SSH_USER`, `SSH_PASSWORD`, `SSH_KEY`, `SSH_PASSPHRASE`
+- Implementation in `src/utils/ssh-tunnel.ts` using the `ssh2` library
+- Automatic tunnel establishment when SSH config is detected
+- Support for both password and key-based authentication
+- Tunnel lifecycle managed by `ConnectorManager`
 
 ## Code Style
 
