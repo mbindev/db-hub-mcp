@@ -217,6 +217,24 @@ postgres://user:password@localhost:5432/dbname
 
 DBHub supports connecting to databases through SSH tunnels, enabling secure access to databases in private networks or behind firewalls.
 
+#### Using SSH Config File (Recommended)
+
+DBHub can read SSH connection settings from your `~/.ssh/config` file. Simply use the host alias from your SSH config:
+
+```bash
+# If you have this in ~/.ssh/config:
+# Host mybastion
+#   HostName bastion.example.com
+#   User ubuntu
+#   IdentityFile ~/.ssh/id_rsa
+
+npx @bytebase/dbhub \
+  --dsn "postgres://dbuser:dbpass@database.internal:5432/mydb" \
+  --ssh-host mybastion
+```
+
+DBHub will automatically use the settings from your SSH config, including hostname, user, port, and identity file. If no identity file is specified in the config, DBHub will try common default locations (`~/.ssh/id_rsa`, `~/.ssh/id_ed25519`, etc.).
+
 #### SSH with Password Authentication
 
 ```bash

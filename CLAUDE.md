@@ -91,9 +91,12 @@ DBHub supports SSH tunnels for secure database connections through bastion hosts
 
 - Configuration via command-line options: `--ssh-host`, `--ssh-port`, `--ssh-user`, `--ssh-password`, `--ssh-key`, `--ssh-passphrase`
 - Configuration via environment variables: `SSH_HOST`, `SSH_PORT`, `SSH_USER`, `SSH_PASSWORD`, `SSH_KEY`, `SSH_PASSPHRASE`
+- SSH config file support: Automatically reads from `~/.ssh/config` when using host aliases
 - Implementation in `src/utils/ssh-tunnel.ts` using the `ssh2` library
+- SSH config parsing in `src/utils/ssh-config-parser.ts` using the `ssh-config` library
 - Automatic tunnel establishment when SSH config is detected
 - Support for both password and key-based authentication
+- Default SSH key detection (tries `~/.ssh/id_rsa`, `~/.ssh/id_ed25519`, etc.)
 - Tunnel lifecycle managed by `ConnectorManager`
 
 ## Code Style

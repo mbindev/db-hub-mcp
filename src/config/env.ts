@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import type { SSHTunnelConfig } from "../types/ssh.js";
+import { parseSSHConfig, looksLikeSSHAlias } from "../utils/ssh-config-parser.js";
 
 // Create __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -229,16 +230,32 @@ export function resolveSSHConfig(): { config: SSHTunnelConfig; source: string } 
   }
 
   // Build SSH config from command line and environment variables
-  const config: Partial<SSHTunnelConfig> = {};
+  let config: Partial<SSHTunnelConfig> = {};
   let sources: string[] = [];
+  let sshConfigHost: string | undefined;
 
   // SSH Host (required)
   if (args["ssh-host"]) {
+    sshConfigHost = args["ssh-host"];
     config.host = args["ssh-host"];
     sources.push("ssh-host from command line");
   } else if (process.env.SSH_HOST) {
+    sshConfigHost = process.env.SSH_HOST;
     config.host = process.env.SSH_HOST;
     sources.push("SSH_HOST from environment");
+  }
+
+  // Check if the host looks like an SSH config alias
+  if (sshConfigHost && looksLikeSSHAlias(sshConfigHost)) {
+    // Try to parse SSH config for this host
+    const sshConfigData = parseSSHConfig(sshConfigHost);
+    if (sshConfigData) {
+      // Use SSH config as base, but allow command line/env to override
+      config = { ...sshConfigData };
+      sources.push(`SSH config for host '${sshConfigHost}'`);
+      
+      // The host from SSH config has already been set, no need to override
+    }
   }
 
   // SSH Port (optional, default: 22)
