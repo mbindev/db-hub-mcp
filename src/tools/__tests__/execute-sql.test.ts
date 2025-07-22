@@ -139,6 +139,86 @@ describe('execute-sql tool', () => {
 
   });
 
+  describe('SQL comments handling', () => {
+    it('should allow SELECT with single-line comment in read-only mode', async () => {
+      mockIsReadOnlyMode.mockReturnValue(true);
+      const mockResult: SQLResult = { rows: [{ id: 1 }] };
+      vi.mocked(mockConnector.executeSQL).mockResolvedValue(mockResult);
+
+      const sql = '-- Fetch active users\nSELECT * FROM users WHERE active = TRUE';
+      const result = await executeSqlToolHandler({ sql }, null);
+      const parsedResult = parseToolResponse(result);
+
+      expect(parsedResult.success).toBe(true);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+    });
+
+    it('should allow SELECT with multi-line comment in read-only mode', async () => {
+      mockIsReadOnlyMode.mockReturnValue(true);
+      const mockResult: SQLResult = { rows: [] };
+      vi.mocked(mockConnector.executeSQL).mockResolvedValue(mockResult);
+
+      const sql = '/* This query fetches\n   all products */\nSELECT * FROM products';
+      const result = await executeSqlToolHandler({ sql }, null);
+      const parsedResult = parseToolResponse(result);
+
+      expect(parsedResult.success).toBe(true);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+    });
+
+    it('should handle multiple statements with comments in read-only mode', async () => {
+      mockIsReadOnlyMode.mockReturnValue(true);
+      const mockResult: SQLResult = { rows: [] };
+      vi.mocked(mockConnector.executeSQL).mockResolvedValue(mockResult);
+
+      const sql = '-- First query\nSELECT * FROM users;\n/* Second query */\nSELECT * FROM roles;';
+      const result = await executeSqlToolHandler({ sql }, null);
+      const parsedResult = parseToolResponse(result);
+
+      expect(parsedResult.success).toBe(true);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+    });
+
+    it('should reject INSERT with comment in read-only mode', async () => {
+      mockIsReadOnlyMode.mockReturnValue(true);
+
+      const sql = '-- Insert new user\nINSERT INTO users (name) VALUES (\'test\')';
+      const result = await executeSqlToolHandler({ sql }, null);
+
+      expect(result.isError).toBe(true);
+      const parsedResult = parseToolResponse(result);
+      expect(parsedResult.success).toBe(false);
+      expect(parsedResult.code).toBe('READONLY_VIOLATION');
+      expect(mockConnector.executeSQL).not.toHaveBeenCalled();
+    });
+
+    it('should handle query that is only comments as read-only', async () => {
+      mockIsReadOnlyMode.mockReturnValue(true);
+      const mockResult: SQLResult = { rows: [] };
+      vi.mocked(mockConnector.executeSQL).mockResolvedValue(mockResult);
+
+      const sql = '-- Just a comment\n/* Another comment */';
+      const result = await executeSqlToolHandler({ sql }, null);
+      const parsedResult = parseToolResponse(result);
+
+      expect(parsedResult.success).toBe(true);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+    });
+
+    it('should handle inline comments correctly', async () => {
+      mockIsReadOnlyMode.mockReturnValue(true);
+      const mockResult: SQLResult = { rows: [] };
+      vi.mocked(mockConnector.executeSQL).mockResolvedValue(mockResult);
+
+      const sql = 'SELECT id, -- user id\n       name -- user name\nFROM users';
+      const result = await executeSqlToolHandler({ sql }, null);
+      const parsedResult = parseToolResponse(result);
+
+      expect(parsedResult.success).toBe(true);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+    });
+  });
+
 
   describe('edge cases', () => {
     it('should handle empty SQL string', async () => {

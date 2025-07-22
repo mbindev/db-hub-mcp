@@ -23,14 +23,39 @@ function splitSQLStatements(sql: string): string[] {
 }
 
 /**
+ * Remove SQL comments from a query
+ * @param sql The SQL query to clean
+ * @returns The SQL query without comments
+ */
+function stripSQLComments(sql: string): string {
+  // Remove single-line comments (-- comment)
+  let cleaned = sql.split('\n').map(line => {
+    const commentIndex = line.indexOf('--');
+    return commentIndex >= 0 ? line.substring(0, commentIndex) : line;
+  }).join('\n');
+  
+  // Remove multi-line comments (/* comment */)
+  cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  
+  return cleaned.trim();
+}
+
+/**
  * Check if a SQL query is read-only based on its first keyword
  * @param sql The SQL query to check
  * @param connectorType The database type to check against
  * @returns True if the query is read-only (starts with allowed keywords)
  */
 function isReadOnlySQL(sql: string, connectorType: ConnectorType): boolean {
-  const normalizedSQL = sql.trim().toLowerCase();
-  const firstWord = normalizedSQL.split(/\s+/)[0];
+  // Strip comments before analyzing
+  const cleanedSQL = stripSQLComments(sql).toLowerCase();
+  
+  // If the statement is empty after removing comments, consider it read-only
+  if (!cleanedSQL) {
+    return true;
+  }
+  
+  const firstWord = cleanedSQL.split(/\s+/)[0];
   
   // Get the appropriate allowed keywords list for this database type
   const keywordList = allowedKeywords[connectorType] || allowedKeywords.default || [];
