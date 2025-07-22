@@ -139,7 +139,7 @@ describe('PostgreSQL SSH Tunnel Simple Integration Tests', () => {
         
         // Verify that SSH config parsing functions were called correctly
         expect(mockLooksLikeSSHAlias).toHaveBeenCalledWith('mybastion');
-        expect(mockParseSSHConfig).toHaveBeenCalledWith('mybastion');
+        expect(mockParseSSHConfig).toHaveBeenCalledWith('mybastion', expect.stringContaining('.ssh/config'));
         
         // Verify that SSH tunnel was attempted with the correct config values from SSH config
         expect(mockSSHTunnelEstablish).toHaveBeenCalledTimes(1);

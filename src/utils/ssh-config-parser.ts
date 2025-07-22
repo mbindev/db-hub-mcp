@@ -50,15 +50,14 @@ function findDefaultSSHKey(): string | undefined {
 /**
  * Parse SSH config file and extract configuration for a specific host
  * @param hostAlias The host alias to look up in the SSH config
- * @param configPath Optional path to SSH config file (defaults to ~/.ssh/config)
+ * @param configPath Path to SSH config file
  * @returns SSH tunnel configuration or null if not found
  */
 export function parseSSHConfig(
   hostAlias: string,
-  configPath?: string
+  configPath: string
 ): SSHTunnelConfig | null {
-  // Default to ~/.ssh/config if no path provided
-  const sshConfigPath = configPath || join(homedir(), '.ssh', 'config');
+  const sshConfigPath = configPath;
 
   // Check if SSH config file exists
   if (!existsSync(sshConfigPath)) {
