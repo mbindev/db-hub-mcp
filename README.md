@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://cursor.com/install-mcp?name=dbhub&config=eyJjb21tYW5kIjoibnB4IEBieXRlYmFzZS9kYmh1YiIsImVudiI6eyJUUkFOU1BPUlQiOiJzdGRpbyIsIkRTTiI6InBvc3RncmVzOi8vdXNlcjpwYXNzd29yZEBsb2NhbGhvc3Q6NTQzMi9kYm5hbWU%2Fc3NsbW9kZT1kaXNhYmxlIiwiUkVBRE9OTFkiOiJ0cnVlIn19"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add dbhub MCP server to Cursor" height="32" /></a>
+  <a href="cursor://anysphere.cursor-deeplink/mcp/install?name=DBHub&config=eyJjb21tYW5kIjoibnB4IEBieXRlYmFzZS9kYmh1YiIsImVudiI6eyJUUkFOU1BPUlQiOiJzdGRpbyIsIkRTTiI6InBvc3RncmVzOi8vdXNlcjpwYXNzd29yZEBsb2NhbGhvc3Q6NTQzMi9kYm5hbWU%2Fc3NsbW9kZT1kaXNhYmxlIiwiUkVBRE9OTFkiOiJ0cnVlIn19"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add dbhub MCP server to Cursor" height="32" /></a>
   <a href="https://discord.gg/BjEkZpsJzn"><img src="https://img.shields.io/badge/%20-Hang%20out%20on%20Discord-5865F2?style=for-the-badge&logo=discord&labelColor=EEEEEE" alt="Join our Discord" height="32" /></a>
 </p>
 
