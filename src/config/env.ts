@@ -166,6 +166,26 @@ export function resolveTransport(): { type: "stdio" | "http"; source: string } {
 }
 
 /**
+ * Resolve max rows from command line args
+ * Returns max rows value or null if not specified
+ */
+export function resolveMaxRows(): { maxRows: number; source: string } | null {
+  // Get command line arguments
+  const args = parseCommandLineArgs();
+
+  // Check command line arguments
+  if (args["max-rows"]) {
+    const maxRows = parseInt(args["max-rows"], 10);
+    if (isNaN(maxRows) || maxRows <= 0) {
+      throw new Error(`Invalid --max-rows value: ${args["max-rows"]}. Must be a positive integer.`);
+    }
+    return { maxRows, source: "command line argument" };
+  }
+
+  return null;
+}
+
+/**
  * Resolve port from command line args or environment variables
  * Returns port number with 8080 as the default
  *

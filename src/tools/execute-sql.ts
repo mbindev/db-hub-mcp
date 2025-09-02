@@ -80,6 +80,7 @@ function areAllStatementsReadOnly(sql: string, connectorType: ConnectorType): bo
  */
 export async function executeSqlToolHandler({ sql }: { sql: string }, _extra: any) {
   const connector = ConnectorManager.getCurrentConnector();
+  const executeOptions = ConnectorManager.getCurrentExecuteOptions();
 
   try {
     // Check if SQL is allowed based on readonly mode
@@ -91,7 +92,7 @@ export async function executeSqlToolHandler({ sql }: { sql: string }, _extra: an
     }
     
     // Execute the SQL (single or multiple statements) if validation passed
-    const result = await connector.executeSQL(sql);
+    const result = await connector.executeSQL(sql, executeOptions);
 
     // Build response data
     const responseData = {

@@ -36,6 +36,15 @@ export interface StoredProcedure {
 }
 
 /**
+ * Options for SQL execution
+ * This interface allows passing execution-specific options to connectors
+ */
+export interface ExecuteOptions {
+  /** Maximum number of rows to return (applied via database-native LIMIT) */
+  maxRows?: number;
+}
+
+/**
  * Connection string (DSN) parser interface
  * Each connector needs to implement its own DSN parser
  */
@@ -136,8 +145,8 @@ export interface Connector {
    */
   getStoredProcedureDetail(procedureName: string, schema?: string): Promise<StoredProcedure>;
 
-  /** Execute a SQL query */
-  executeSQL(sql: string): Promise<SQLResult>;
+  /** Execute a SQL query with execution options */
+  executeSQL(sql: string, options: ExecuteOptions): Promise<SQLResult>;
 }
 
 /**

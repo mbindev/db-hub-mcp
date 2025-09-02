@@ -1,6 +1,6 @@
-import { Connector, ConnectorType, ConnectorRegistry } from "./interface.js";
+import { Connector, ConnectorType, ConnectorRegistry, ExecuteOptions } from "./interface.js";
 import { SSHTunnel } from "../utils/ssh-tunnel.js";
-import { resolveSSHConfig } from "../config/env.js";
+import { resolveSSHConfig, resolveMaxRows } from "../config/env.js";
 import type { SSHTunnelConfig } from "../types/ssh.js";
 
 // Singleton instance for global access
@@ -14,10 +14,18 @@ export class ConnectorManager {
   private connected = false;
   private sshTunnel: SSHTunnel | null = null;
   private originalDSN: string | null = null;
+  private maxRows: number | null = null;
 
   constructor() {
     if (!managerInstance) {
       managerInstance = this;
+    }
+    
+    // Initialize maxRows from command line arguments
+    const maxRowsData = resolveMaxRows();
+    if (maxRowsData) {
+      this.maxRows = maxRowsData.maxRows;
+      console.error(`Max rows limit: ${this.maxRows} (from ${maxRowsData.source})`);
     }
   }
 
@@ -148,6 +156,28 @@ export class ConnectorManager {
       throw new Error("ConnectorManager not initialized");
     }
     return managerInstance.getConnector();
+  }
+
+  /**
+   * Get execute options for SQL execution
+   */
+  getExecuteOptions(): ExecuteOptions {
+    const options: ExecuteOptions = {};
+    if (this.maxRows !== null) {
+      options.maxRows = this.maxRows;
+    }
+    return options;
+  }
+
+  /**
+   * Get the current execute options
+   * This is used by tool handlers
+   */
+  static getCurrentExecuteOptions(): ExecuteOptions {
+    if (!managerInstance) {
+      throw new Error("ConnectorManager not initialized");
+    }
+    return managerInstance.getExecuteOptions();
   }
   
   /**

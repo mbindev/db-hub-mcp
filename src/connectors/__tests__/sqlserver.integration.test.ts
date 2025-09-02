@@ -63,7 +63,7 @@ class SQLServerIntegrationTest extends IntegrationTestBase<SQLServerTestContaine
         email NVARCHAR(100) UNIQUE NOT NULL,
         age INT
       )
-    `);
+    `, {});
 
     // Create orders table
     await connector.executeSQL(`
@@ -74,7 +74,7 @@ class SQLServerIntegrationTest extends IntegrationTestBase<SQLServerTestContaine
         created_at DATETIME2 DEFAULT GETDATE(),
         FOREIGN KEY (user_id) REFERENCES users(id)
       )
-    `);
+    `, {});
 
     // Create products table
     await connector.executeSQL(`
@@ -83,7 +83,7 @@ class SQLServerIntegrationTest extends IntegrationTestBase<SQLServerTestContaine
         name NVARCHAR(100) NOT NULL,
         price DECIMAL(10,2)
       )
-    `);
+    `, {});
 
     // Insert test data
     await connector.executeSQL(`
@@ -91,20 +91,20 @@ class SQLServerIntegrationTest extends IntegrationTestBase<SQLServerTestContaine
       ('John Doe', 'john@example.com', 30),
       ('Jane Smith', 'jane@example.com', 25),
       ('Bob Johnson', 'bob@example.com', 35)
-    `);
+    `, {});
 
     await connector.executeSQL(`
       INSERT INTO orders (user_id, total) VALUES 
       (1, 99.99),
       (1, 149.50),
       (2, 75.25)
-    `);
+    `, {});
 
     await connector.executeSQL(`
       INSERT INTO products (name, price) VALUES 
       ('Widget A', 19.99),
       ('Widget B', 29.99)
-    `);
+    `, {});
 
     // Create test stored functions/procedures
     await connector.executeSQL(`
@@ -116,7 +116,7 @@ class SQLServerIntegrationTest extends IntegrationTestBase<SQLServerTestContaine
         SELECT @count = COUNT(*) FROM users
         RETURN @count
       END
-    `);
+    `, {});
 
     await connector.executeSQL(`
       CREATE FUNCTION CalculateTotalAge()
@@ -127,7 +127,7 @@ class SQLServerIntegrationTest extends IntegrationTestBase<SQLServerTestContaine
         SELECT @total = ISNULL(SUM(age), 0) FROM users WHERE age IS NOT NULL
         RETURN @total
       END
-    `);
+    `, {});
   }
 }
 
@@ -199,7 +199,7 @@ describe('SQL Server Connector Integration Tests', () => {
             THEN 'Encrypted' 
             ELSE 'Unencrypted' 
           END as encryption_status
-      `);
+      `, {});
       
       expect(encryptionResult.rows[0].encryption_status).toBe('Unencrypted');
       expect(encryptionResult.rows[0].protocol_type).not.toMatch(/TLS|SSL/i);
@@ -215,14 +215,15 @@ describe('SQL Server Connector Integration Tests', () => {
           id INT IDENTITY(1,1) PRIMARY KEY,
           name NVARCHAR(50)
         )
-      `);
+      `, {});
 
       await sqlServerTest.connector.executeSQL(`
         INSERT INTO identity_test (name) VALUES ('Test 1'), ('Test 2')
-      `);
+      `, {});
 
       const result = await sqlServerTest.connector.executeSQL(
-        'SELECT * FROM identity_test ORDER BY id'
+        'SELECT * FROM identity_test ORDER BY id',
+        {}
       );
       
       expect(result.rows).toHaveLength(2);
@@ -241,15 +242,16 @@ describe('SQL Server Connector Integration Tests', () => {
           xml_data XML,
           binary_data VARBINARY(100)
         )
-      `);
+      `, {});
 
       await sqlServerTest.connector.executeSQL(`
         INSERT INTO sqlserver_types_test (unicode_text, datetime_val, xml_data, binary_data) 
         VALUES (N'Unicode Text 测试', GETDATE(), '<root><item>test</item></root>', 0x48656C6C6F)
-      `);
+      `, {});
 
       const result = await sqlServerTest.connector.executeSQL(
-        'SELECT * FROM sqlserver_types_test'
+        'SELECT * FROM sqlserver_types_test',
+        {}
       );
       
       expect(result.rows).toHaveLength(1);
@@ -266,7 +268,7 @@ describe('SQL Server Connector Integration Tests', () => {
           SUSER_NAME() as current_user_name,
           GETDATE() as current_datetime,
           NEWID() as new_guid
-      `);
+      `, {});
       
       expect(result.rows).toHaveLength(1);
       expect(result.rows[0].sql_version).toContain('Microsoft SQL Server');
@@ -283,10 +285,11 @@ describe('SQL Server Connector Integration Tests', () => {
         INSERT INTO users (name, email, age) VALUES ('Transaction Test 1', 'trans1@example.com', 45);
         INSERT INTO users (name, email, age) VALUES ('Transaction Test 2', 'trans2@example.com', 50);
         COMMIT TRANSACTION;
-      `);
+      `, {});
       
       const result = await sqlServerTest.connector.executeSQL(
-        "SELECT COUNT(*) as count FROM users WHERE email LIKE 'trans%@example.com'"
+        "SELECT COUNT(*) as count FROM users WHERE email LIKE 'trans%@example.com'",
+        {}
       );
       expect(Number(result.rows[0].count)).toBe(2);
     });
@@ -294,7 +297,8 @@ describe('SQL Server Connector Integration Tests', () => {
     it('should handle SQL Server rollback correctly', async () => {
       // Get initial count
       const beforeResult = await sqlServerTest.connector.executeSQL(
-        "SELECT COUNT(*) as count FROM users WHERE email = 'rollback@example.com'"
+        "SELECT COUNT(*) as count FROM users WHERE email = 'rollback@example.com'",
+        {}
       );
       const beforeCount = Number(beforeResult.rows[0].count);
       
@@ -303,10 +307,11 @@ describe('SQL Server Connector Integration Tests', () => {
         BEGIN TRANSACTION;
         INSERT INTO users (name, email, age) VALUES ('Rollback Test', 'rollback@example.com', 55);
         ROLLBACK TRANSACTION;
-      `);
+      `, {});
       
       const afterResult = await sqlServerTest.connector.executeSQL(
-        "SELECT COUNT(*) as count FROM users WHERE email = 'rollback@example.com'"
+        "SELECT COUNT(*) as count FROM users WHERE email = 'rollback@example.com'",
+        {}
       );
       const afterCount = Number(afterResult.rows[0].count);
       
@@ -318,7 +323,7 @@ describe('SQL Server Connector Integration Tests', () => {
         INSERT INTO users (name, email, age) 
         OUTPUT INSERTED.id, INSERTED.name
         VALUES ('Output Test', 'output@example.com', 40)
-      `);
+      `, {});
       
       expect(result.rows).toHaveLength(1);
       expect(result.rows[0].id).toBeDefined();
@@ -335,7 +340,7 @@ describe('SQL Server Connector Integration Tests', () => {
         FROM users
         WHERE age IS NOT NULL
         ORDER BY age DESC
-      `);
+      `, {});
       
       expect(result.rows.length).toBeGreaterThan(0);
       expect(result.rows[0]).toHaveProperty('age_rank');
@@ -356,7 +361,7 @@ describe('SQL Server Connector Integration Tests', () => {
         SELECT * FROM UserOrderSummary 
         WHERE order_count > 0
         ORDER BY total_spent DESC
-      `);
+      `, {});
       
       expect(result.rows.length).toBeGreaterThan(0);
       expect(result.rows[0]).toHaveProperty('name');
@@ -370,13 +375,13 @@ describe('SQL Server Connector Integration Tests', () => {
           id INT IDENTITY(1,1) PRIMARY KEY,
           data NVARCHAR(MAX)
         )
-      `);
+      `, {});
 
       await sqlServerTest.connector.executeSQL(`
         INSERT INTO json_test (data) VALUES 
         (N'{"name": "John", "tags": ["admin", "user"], "settings": {"theme": "dark"}}'),
         (N'{"name": "Jane", "tags": ["user"], "settings": {"theme": "light"}}')
-      `);
+      `, {});
 
       const result = await sqlServerTest.connector.executeSQL(`
         SELECT 
@@ -385,7 +390,7 @@ describe('SQL Server Connector Integration Tests', () => {
           JSON_QUERY(data, '$.tags') as tags
         FROM json_test
         WHERE JSON_VALUE(data, '$.name') = 'John'
-      `);
+      `, {});
       
       expect(result.rows).toHaveLength(1);
       expect(result.rows[0].name).toBe('John');
@@ -402,13 +407,13 @@ describe('SQL Server Connector Integration Tests', () => {
           email NVARCHAR(100),
           age INT
         )
-      `);
+      `, {});
 
       await sqlServerTest.connector.executeSQL(`
         INSERT INTO users_staging (id, name, email, age) VALUES 
         (1, 'John Doe Updated', 'john@example.com', 31),
         (999, 'New User', 'new@example.com', 25)
-      `);
+      `, {});
 
       const result = await sqlServerTest.connector.executeSQL(`
         MERGE users AS target
@@ -419,13 +424,110 @@ describe('SQL Server Connector Integration Tests', () => {
         WHEN NOT MATCHED THEN
           INSERT (name, email, age) VALUES (source.name, source.email, source.age)
         OUTPUT $action, INSERTED.name;
-      `);
+      `, {});
       
       expect(result.rows.length).toBeGreaterThan(0);
       // Should have both UPDATE and INSERT actions
       const actions = result.rows.map(row => row.$action);
       expect(actions).toContain('UPDATE');
       expect(actions).toContain('INSERT');
+    });
+
+    it('should respect maxRows limit for SELECT queries', async () => {
+      // Test basic SELECT with maxRows limit
+      const result = await sqlServerTest.connector.executeSQL(
+        'SELECT * FROM users ORDER BY id',
+        { maxRows: 2 }
+      );
+      
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0]).toHaveProperty('name');
+      expect(result.rows[1]).toHaveProperty('name');
+    });
+
+    it('should respect existing TOP clause when lower than maxRows', async () => {
+      // Test when existing TOP is lower than maxRows
+      const result = await sqlServerTest.connector.executeSQL(
+        'SELECT TOP 1 * FROM users ORDER BY id',
+        { maxRows: 3 }
+      );
+      
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]).toHaveProperty('name');
+    });
+
+    it('should use maxRows when existing TOP is higher', async () => {
+      // Test when existing TOP is higher than maxRows
+      const result = await sqlServerTest.connector.executeSQL(
+        'SELECT TOP 10 * FROM users ORDER BY id',
+        { maxRows: 2 }
+      );
+      
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0]).toHaveProperty('name');
+      expect(result.rows[1]).toHaveProperty('name');
+    });
+
+    it('should not affect non-SELECT queries', async () => {
+      // Test that maxRows doesn't affect INSERT/UPDATE/DELETE
+      const insertResult = await sqlServerTest.connector.executeSQL(
+        "INSERT INTO users (name, email, age) VALUES ('MaxRows Test', 'maxrows@sqlserver.com', 25)",
+        { maxRows: 1 }
+      );
+      
+      expect(insertResult.rows).toHaveLength(0); // INSERTs without OUTPUT don't return rows by default
+      
+      // Verify the insert worked
+      const selectResult = await sqlServerTest.connector.executeSQL(
+        "SELECT * FROM users WHERE email = 'maxrows@sqlserver.com'",
+        {}
+      );
+      expect(selectResult.rows).toHaveLength(1);
+      expect(selectResult.rows[0].name).toBe('MaxRows Test');
+    });
+
+    it('should handle maxRows with complex queries', async () => {
+      // Test maxRows with JOIN queries
+      const result = await sqlServerTest.connector.executeSQL(`
+        SELECT u.name, o.total 
+        FROM users u 
+        INNER JOIN orders o ON u.id = o.user_id 
+        ORDER BY o.total DESC
+      `, { maxRows: 2 });
+      
+      expect(result.rows.length).toBeLessThanOrEqual(2);
+      expect(result.rows.length).toBeGreaterThan(0);
+      expect(result.rows[0]).toHaveProperty('name');
+      expect(result.rows[0]).toHaveProperty('total');
+    });
+
+    it('should handle maxRows with window functions', async () => {
+      // Test maxRows with window function queries
+      const result = await sqlServerTest.connector.executeSQL(`
+        SELECT 
+          name,
+          age,
+          ROW_NUMBER() OVER (ORDER BY age DESC) as age_rank
+        FROM users
+        WHERE age IS NOT NULL
+        ORDER BY age DESC
+      `, { maxRows: 2 });
+      
+      expect(result.rows.length).toBeLessThanOrEqual(2);
+      expect(result.rows.length).toBeGreaterThan(0);
+      expect(result.rows[0]).toHaveProperty('name');
+      expect(result.rows[0]).toHaveProperty('age_rank');
+    });
+
+    it('should ignore maxRows when not specified', async () => {
+      // Test without maxRows - should return all rows
+      const result = await sqlServerTest.connector.executeSQL(
+        'SELECT * FROM users ORDER BY id',
+        {}
+      );
+      
+      // Should return all users (at least the original 3 plus any added in previous tests)
+      expect(result.rows.length).toBeGreaterThanOrEqual(3);
     });
   });
 });

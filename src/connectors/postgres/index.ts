@@ -9,9 +9,11 @@ import {
   TableColumn,
   TableIndex,
   StoredProcedure,
+  ExecuteOptions,
 } from "../interface.js";
 import { SafeURL } from "../../utils/safe-url.js";
 import { obfuscateDSNPassword } from "../../utils/dsn-obfuscate.js";
+import { SQLRowLimiter } from "../../utils/sql-row-limiter.js";
 
 /**
  * PostgreSQL DSN Parser
@@ -393,7 +395,8 @@ export class PostgresConnector implements Connector {
     }
   }
 
-  async executeSQL(sql: string): Promise<SQLResult> {
+
+  async executeSQL(sql: string, options: ExecuteOptions): Promise<SQLResult> {
     if (!this.pool) {
       throw new Error("Not connected to database");
     }
@@ -406,8 +409,10 @@ export class PostgresConnector implements Connector {
         .filter(statement => statement.length > 0);
 
       if (statements.length === 1) {
-        // Single statement
-        return await client.query(statements[0]);
+        // Single statement - apply maxRows if applicable
+        const processedStatement = SQLRowLimiter.applyMaxRows(statements[0], options.maxRows);
+        
+        return await client.query(processedStatement);
       } else {
         // Multiple statements - execute all in same session for transaction consistency
         let allRows: any[] = [];
@@ -415,8 +420,11 @@ export class PostgresConnector implements Connector {
         // Execute within a transaction to ensure session consistency
         await client.query('BEGIN');
         try {
-          for (const statement of statements) {
-            const result = await client.query(statement);
+          for (let statement of statements) {
+            // Apply maxRows limit to SELECT queries if specified
+            const processedStatement = SQLRowLimiter.applyMaxRows(statement, options.maxRows);
+            
+            const result = await client.query(processedStatement);
             // Collect rows from SELECT/WITH/EXPLAIN statements
             if (result.rows && result.rows.length > 0) {
               allRows.push(...result.rows);

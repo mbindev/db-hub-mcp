@@ -14,10 +14,12 @@ import {
   TableColumn,
   TableIndex,
   StoredProcedure,
+  ExecuteOptions,
 } from "../interface.js";
 import Database from "better-sqlite3";
 import { SafeURL } from "../../utils/safe-url.js";
 import { obfuscateDSNPassword } from "../../utils/dsn-obfuscate.js";
+import { SQLRowLimiter } from "../../utils/sql-row-limiter.js";
 
 /**
  * SQLite DSN Parser
@@ -328,7 +330,8 @@ export class SQLiteConnector implements Connector {
     );
   }
 
-  async executeSQL(sql: string): Promise<SQLResult> {
+
+  async executeSQL(sql: string, options: ExecuteOptions): Promise<SQLResult> {
     if (!this.db) {
       throw new Error("Not connected to SQLite database");
     }
@@ -341,6 +344,7 @@ export class SQLiteConnector implements Connector {
 
       if (statements.length === 1) {
         // Single statement - determine if it returns data
+        let processedStatement = statements[0];
         const trimmedStatement = statements[0].toLowerCase().trim();
         const isReadStatement = trimmedStatement.startsWith('select') || 
                                trimmedStatement.startsWith('with') || 
@@ -352,12 +356,17 @@ export class SQLiteConnector implements Connector {
                                  trimmedStatement.includes('index_list') ||
                                  trimmedStatement.includes('foreign_key_list')));
 
+        // Apply maxRows limit to SELECT queries if specified (not PRAGMA/ANALYZE)
+        if (options.maxRows) {
+          processedStatement = SQLRowLimiter.applyMaxRows(processedStatement, options.maxRows);
+        }
+
         if (isReadStatement) {
-          const rows = this.db.prepare(statements[0]).all();
+          const rows = this.db.prepare(processedStatement).all();
           return { rows };
         } else {
           // Use run() for statements that don't return data
-          this.db.prepare(statements[0]).run();
+          this.db.prepare(processedStatement).run();
           return { rows: [] };
         }
       } else {
@@ -391,7 +400,9 @@ export class SQLiteConnector implements Connector {
 
         // Execute read statements individually to collect results
         let allRows: any[] = [];
-        for (const statement of readStatements) {
+        for (let statement of readStatements) {
+          // Apply maxRows limit to SELECT queries if specified
+          statement = SQLRowLimiter.applyMaxRows(statement, options.maxRows);
           const result = this.db.prepare(statement).all();
           allRows.push(...result);
         }

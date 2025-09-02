@@ -67,7 +67,7 @@ describe('PostgreSQL SSH Tunnel Simple Integration Tests', () => {
       
       // Test that connection works
       const connector = manager.getConnector();
-      const result = await connector.executeSQL('SELECT 1 as test');
+      const result = await connector.executeSQL('SELECT 1 as test', {});
       expect(result.rows).toHaveLength(1);
       expect(result.rows[0].test).toBe(1);
       

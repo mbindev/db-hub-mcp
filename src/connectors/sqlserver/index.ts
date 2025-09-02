@@ -8,10 +8,12 @@ import {
   TableColumn,
   TableIndex,
   StoredProcedure,
+  ExecuteOptions,
 } from "../interface.js";
 import { DefaultAzureCredential } from "@azure/identity";
 import { SafeURL } from "../../utils/safe-url.js";
 import { obfuscateDSNPassword } from "../../utils/dsn-obfuscate.js";
+import { SQLRowLimiter } from "../../utils/sql-row-limiter.js";
 
 /**
  * SQL Server DSN parser
@@ -462,13 +464,19 @@ export class SQLServerConnector implements Connector {
     }
   }
 
-  async executeSQL(sql: string): Promise<SQLResult> {
+  async executeSQL(sql: string, options: ExecuteOptions): Promise<SQLResult> {
     if (!this.connection) {
       throw new Error("Not connected to SQL Server database");
     }
 
     try {
-      const result = await this.connection.request().query(sql);
+      // Apply maxRows limit to SELECT queries if specified
+      let processedSQL = sql;
+      if (options.maxRows) {
+        processedSQL = SQLRowLimiter.applyMaxRowsForSQLServer(sql, options.maxRows);
+      }
+
+      const result = await this.connection.request().query(processedSQL);
       return {
         rows: result.recordset || [],
         fields:

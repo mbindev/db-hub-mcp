@@ -8,9 +8,11 @@ import {
   TableColumn,
   TableIndex,
   StoredProcedure,
+  ExecuteOptions,
 } from "../interface.js";
 import { SafeURL } from "../../utils/safe-url.js";
 import { obfuscateDSNPassword } from "../../utils/dsn-obfuscate.js";
+import { SQLRowLimiter } from "../../utils/sql-row-limiter.js";
 
 /**
  * MariaDB DSN Parser
@@ -467,14 +469,32 @@ export class MariaDBConnector implements Connector {
     return rows[0].DB;
   }
 
-  async executeSQL(sql: string): Promise<SQLResult> {
+  async executeSQL(sql: string, options: ExecuteOptions): Promise<SQLResult> {
     if (!this.pool) {
       throw new Error("Not connected to database");
     }
 
     try {
+      // Apply maxRows limit to SELECT queries if specified
+      let processedSQL = sql;
+      if (options.maxRows) {
+        // Handle multi-statement SQL by processing each statement individually
+        const statements = sql.split(';')
+          .map(statement => statement.trim())
+          .filter(statement => statement.length > 0);
+        
+        const processedStatements = statements.map(statement => 
+          SQLRowLimiter.applyMaxRows(statement, options.maxRows)
+        );
+        
+        processedSQL = processedStatements.join('; ');
+        if (sql.trim().endsWith(';')) {
+          processedSQL += ';';
+        }
+      }
+
       // Use pool.query - MariaDB driver returns rows directly for single statements
-      const results = await this.pool.query(sql) as any;
+      const results = await this.pool.query(processedSQL) as any;
       
       // MariaDB driver returns different formats:
       // - Single statement: returns rows array directly

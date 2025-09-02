@@ -8,9 +8,11 @@ import {
   TableColumn,
   TableIndex,
   StoredProcedure,
+  ExecuteOptions,
 } from "../interface.js";
 import { SafeURL } from "../../utils/safe-url.js";
 import { obfuscateDSNPassword } from "../../utils/dsn-obfuscate.js";
+import { SQLRowLimiter } from "../../utils/sql-row-limiter.js";
 
 /**
  * MySQL DSN Parser
@@ -464,14 +466,32 @@ export class MySQLConnector implements Connector {
     return rows[0].DB;
   }
 
-  async executeSQL(sql: string): Promise<SQLResult> {
+  async executeSQL(sql: string, options: ExecuteOptions): Promise<SQLResult> {
     if (!this.pool) {
       throw new Error("Not connected to database");
     }
 
     try {
+      // Apply maxRows limit to SELECT queries if specified
+      let processedSQL = sql;
+      if (options.maxRows) {
+        // Handle multi-statement SQL by processing each statement individually
+        const statements = sql.split(';')
+          .map(statement => statement.trim())
+          .filter(statement => statement.length > 0);
+        
+        const processedStatements = statements.map(statement => 
+          SQLRowLimiter.applyMaxRows(statement, options.maxRows)
+        );
+        
+        processedSQL = processedStatements.join('; ');
+        if (sql.trim().endsWith(';')) {
+          processedSQL += ';';
+        }
+      }
+
       // Use pool.query with multipleStatements: true support
-      const results = await this.pool.query(sql) as any;
+      const results = await this.pool.query(processedSQL) as any;
       
       // MySQL2 with multipleStatements returns:
       // - Single statement: [rows, fields] 
@@ -479,17 +499,20 @@ export class MySQLConnector implements Connector {
       
       const [firstResult] = results;
       
-      // Check if this is a multi-statement result by seeing if firstResult[0] is also an array
-      // indicating it contains multiple [rows, fields] pairs
+      // Check if this is a multi-statement result
       if (Array.isArray(firstResult) && firstResult.length > 0 && 
-          Array.isArray(firstResult[0]) && firstResult[0].length === 2) {
-        // Multiple statements - firstResult is an array of [rows, fields] pairs
+          Array.isArray(firstResult[0])) {
+        // Multiple statements - firstResult is an array of results  
         let allRows: any[] = [];
         
-        for (const [rows, _fields] of firstResult) {
-          if (Array.isArray(rows)) {
-            allRows.push(...rows);
+        for (const result of firstResult) {
+          // Each result is either a ResultSetHeader object (for INSERT/UPDATE/DELETE) 
+          // or an array of rows (for SELECT)
+          if (Array.isArray(result)) {
+            // This is a rows array from a SELECT query
+            allRows.push(...result);
           }
+          // Skip non-array results (ResultSetHeader objects)
         }
         
         return { rows: allRows };

@@ -181,19 +181,19 @@ export abstract class IntegrationTestBase<TContainer extends TestContainer> {
   createSQLExecutionTests(): void {
     describe('SQL Execution', () => {
       it('should execute simple SELECT query', async () => {
-        const result = await this.connector.executeSQL('SELECT COUNT(*) as count FROM users');
+        const result = await this.connector.executeSQL('SELECT COUNT(*) as count FROM users', {});
         expect(result.rows).toHaveLength(1);
         expect(Number(result.rows[0].count)).toBeGreaterThanOrEqual(3);
       });
 
       it('should execute INSERT and SELECT', async () => {
         const insertResult = await this.connector.executeSQL(
-          "INSERT INTO users (name, email, age) VALUES ('Test User', 'test@example.com', 25)"
+          "INSERT INTO users (name, email, age) VALUES ('Test User', 'test@example.com', 25)", {}
         );
         expect(insertResult).toBeDefined();
         
         const selectResult = await this.connector.executeSQL(
-          "SELECT * FROM users WHERE email = 'test@example.com'"
+          "SELECT * FROM users WHERE email = 'test@example.com'", {}
         );
         expect(selectResult.rows).toHaveLength(1);
         expect(selectResult.rows[0].name).toBe('Test User');
@@ -208,7 +208,7 @@ export abstract class IntegrationTestBase<TContainer extends TestContainer> {
           GROUP BY u.id, u.name
           HAVING COUNT(o.id) > 0
           ORDER BY order_count DESC
-        `);
+        `, {});
         
         expect(result.rows.length).toBeGreaterThan(0);
         expect(result.rows[0]).toHaveProperty('name');
@@ -243,14 +243,14 @@ export abstract class IntegrationTestBase<TContainer extends TestContainer> {
     describe('Error Handling', () => {
       it('should handle invalid SQL gracefully', async () => {
         await expect(
-          this.connector.executeSQL('SELECT * FROM nonexistent_table')
+          this.connector.executeSQL('SELECT * FROM nonexistent_table', {})
         ).rejects.toThrow();
       });
 
       it('should handle connection errors', async () => {
         const newConnector = this.createConnector();
         await expect(
-          newConnector.executeSQL('SELECT 1')
+          newConnector.executeSQL('SELECT 1', {})
         ).rejects.toThrow(/Not connected to.*database/);
       });
 

@@ -19,8 +19,8 @@ Add to Cursor by copying the below link to browser
 ```text
 cursor://anysphere.cursor-deeplink/mcp/install?name=dbhub&config=eyJjb21tYW5kIjoibnB4IEBieXRlYmFzZS9kYmh1YiIsImVudiI6eyJUUkFOU1BPUlQiOiJzdGRpbyIsIkRTTiI6InBvc3RncmVzOi8vdXNlcjpwYXNzd29yZEBsb2NhbGhvc3Q6NTQzMi9kYm5hbWU%2Fc3NsbW9kZT1kaXNhYmxlIiwiUkVBRE9OTFkiOiJ0cnVlIn19
 ```
-</p>
 
+</p>
 
 DBHub is a universal database gateway implementing the Model Context Protocol (MCP) server interface. This gateway allows MCP-compatible clients to connect to and explore different databases.
 
@@ -173,6 +173,7 @@ Add to Cursor by copying the below link to browser
 ```text
 cursor://anysphere.cursor-deeplink/mcp/install?name=dbhub&config=eyJjb21tYW5kIjoibnB4IEBieXRlYmFzZS9kYmh1YiIsImVudiI6eyJUUkFOU1BPUlQiOiJzdGRpbyIsIkRTTiI6InBvc3RncmVzOi8vdXNlcjpwYXNzd29yZEBsb2NhbGhvc3Q6NTQzMi9kYm5hbWU%2Fc3NsbW9kZT1kaXNhYmxlIiwiUkVBRE9OTFkiOiJ0cnVlIn19
 ```
+
 </p>
 
 ![cursor](https://raw.githubusercontent.com/bytebase/dbhub/main/resources/images/cursor.webp)
@@ -194,6 +195,18 @@ npx @bytebase/dbhub --readonly --dsn "postgres://user:password@localhost:5432/db
 In read-only mode, only [readonly SQL operations](https://github.com/bytebase/dbhub/blob/main/src/utils/allowed-keywords.ts) are allowed.
 
 This provides an additional layer of security when connecting to production databases.
+
+### Row Limiting
+
+You can limit the number of rows returned from SELECT queries using the `--max-rows` parameter. This helps prevent accidentally retrieving too much data from large tables:
+
+```bash
+# Limit SELECT queries to return at most 1000 rows
+npx @bytebase/dbhub --dsn "postgres://user:password@localhost:5432/dbname" --max-rows 1000
+```
+
+- Row limiting is only applied to SELECT statements, not INSERT/UPDATE/DELETE
+- If your query already has a `LIMIT` or `TOP` clause, DBHub uses the smaller value
 
 ### SSL Connections
 
@@ -367,6 +380,7 @@ Extra query parameters:
 | transport      | `TRANSPORT`          | Transport mode: `stdio` or `http`                                | `stdio`                      |
 | port           | `PORT`               | HTTP server port (only applicable when using `--transport=http`) | `8080`                       |
 | readonly       | `READONLY`           | Restrict SQL execution to read-only operations                   | `false`                      |
+| max-rows       | N/A                  | Limit the number of rows returned from SELECT queries            | No limit                     |
 | demo           | N/A                  | Run in demo mode with sample employee database                   | `false`                      |
 | ssh-host       | `SSH_HOST`           | SSH server hostname for tunnel connection                        | N/A                          |
 | ssh-port       | `SSH_PORT`           | SSH server port                                                  | `22`                         |

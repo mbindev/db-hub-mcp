@@ -53,7 +53,7 @@ class SQLiteIntegrationTest extends IntegrationTestBase<SQLiteTestContainer> {
         email VARCHAR(100) UNIQUE NOT NULL,
         age INTEGER
       )
-    `);
+    `, {});
 
     // Create orders table
     await connector.executeSQL(`
@@ -63,7 +63,7 @@ class SQLiteIntegrationTest extends IntegrationTestBase<SQLiteTestContainer> {
         total DECIMAL(10,2),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
-    `);
+    `, {});
 
     // Insert test data
     await connector.executeSQL(`
@@ -71,14 +71,14 @@ class SQLiteIntegrationTest extends IntegrationTestBase<SQLiteTestContainer> {
       ('John Doe', 'john@example.com', 30),
       ('Jane Smith', 'jane@example.com', 25),
       ('Bob Johnson', 'bob@example.com', 35)
-    `);
+    `, {});
 
     await connector.executeSQL(`
       INSERT INTO orders (user_id, total) VALUES 
       (1, 99.99),
       (1, 149.50),
       (2, 75.25)
-    `);
+    `, {});
   }
 }
 
@@ -112,15 +112,15 @@ describe('SQLite Connector Integration Tests', () => {
           blob_val BLOB,
           null_val TEXT
         )
-      `);
+      `, {});
 
       await sqliteTest.connector.executeSQL(`
         INSERT INTO types_test (text_val, int_val, real_val, blob_val, null_val) 
         VALUES ('test string', 42, 3.14159, X'48656C6C6F', NULL)
-      `);
+      `, {});
 
       const result = await sqliteTest.connector.executeSQL(
-        'SELECT * FROM types_test ORDER BY id DESC LIMIT 1'
+        'SELECT * FROM types_test ORDER BY id DESC LIMIT 1', {}
       );
       
       expect(result.rows).toHaveLength(1);
@@ -138,7 +138,7 @@ describe('SQLite Connector Integration Tests', () => {
           hex(randomblob(16)) as random_hex,
           upper('hello world') as uppercase_text,
           length('test string') as string_length
-      `);
+      `, {});
       
       expect(result.rows).toHaveLength(1);
       expect(result.rows[0].sqlite_version).toBeDefined();
@@ -155,10 +155,10 @@ describe('SQLite Connector Integration Tests', () => {
         INSERT INTO users (name, email, age) VALUES ('Transaction User 1', 'trans1@example.com', 28);
         INSERT INTO users (name, email, age) VALUES ('Transaction User 2', 'trans2@example.com', 32);
         COMMIT;
-      `);
+      `, {});
 
       const successResult = await sqliteTest.connector.executeSQL(
-        "SELECT COUNT(*) as count FROM users WHERE email LIKE 'trans%@example.com'"
+        "SELECT COUNT(*) as count FROM users WHERE email LIKE 'trans%@example.com'", {}
       );
       expect(Number(successResult.rows[0].count)).toBe(2);
 
@@ -167,11 +167,11 @@ describe('SQLite Connector Integration Tests', () => {
         BEGIN TRANSACTION;
         INSERT INTO users (name, email, age) VALUES ('Transaction User 3', 'trans3@example.com', 40);
         ROLLBACK;
-      `);
+      `, {});
       
       // Verify rollback worked - should still be 2 transaction users
       const rollbackResult = await sqliteTest.connector.executeSQL(
-        "SELECT COUNT(*) as count FROM users WHERE email LIKE 'trans%@example.com'"
+        "SELECT COUNT(*) as count FROM users WHERE email LIKE 'trans%@example.com'", {}
       );
       expect(Number(rollbackResult.rows[0].count)).toBe(2);
     });
@@ -179,7 +179,7 @@ describe('SQLite Connector Integration Tests', () => {
     it('should handle SQLite pragma statements', async () => {
       const result = await sqliteTest.connector.executeSQL(`
         PRAGMA table_info(users);
-      `);
+      `, {});
       
       expect(result.rows.length).toBeGreaterThan(0);
       expect(result.rows.some(row => row.name === 'id')).toBe(true);
@@ -197,7 +197,7 @@ describe('SQLite Connector Integration Tests', () => {
         FROM users
         WHERE age IS NOT NULL
         ORDER BY age DESC
-      `);
+      `, {});
       
       expect(result.rows.length).toBeGreaterThan(0);
       expect(result.rows[0]).toHaveProperty('age_rank');
@@ -212,13 +212,13 @@ describe('SQLite Connector Integration Tests', () => {
             id INTEGER PRIMARY KEY,
             data TEXT
           )
-        `);
+        `, {});
 
         await sqliteTest.connector.executeSQL(`
           INSERT INTO json_test (data) VALUES 
           ('{"name": "John", "age": 30, "tags": ["admin", "user"]}'),
           ('{"name": "Jane", "age": 25, "tags": ["user"]}')
-        `);
+        `, {});
 
         // Try to use json_extract (available in newer SQLite versions)
         const result = await sqliteTest.connector.executeSQL(`
@@ -227,7 +227,7 @@ describe('SQLite Connector Integration Tests', () => {
             json_extract(data, '$.age') as age
           FROM json_test
           WHERE json_extract(data, '$.age') > 27
-        `);
+        `, {});
         
         expect(result.rows).toHaveLength(1);
         expect(result.rows[0].name).toBe('John');
@@ -243,7 +243,7 @@ describe('SQLite Connector Integration Tests', () => {
         INSERT INTO users (name, email, age) VALUES ('Multi User 1', 'multi1@example.com', 30);
         INSERT INTO users (name, email, age) VALUES ('Multi User 2', 'multi2@example.com', 35);
         SELECT COUNT(*) as total FROM users WHERE email LIKE 'multi%';
-      `);
+      `, {});
       
       expect(result.rows).toHaveLength(1);
       expect(Number(result.rows[0].total)).toBe(2);
@@ -251,17 +251,17 @@ describe('SQLite Connector Integration Tests', () => {
 
     it('should handle SQLite foreign key constraints', async () => {
       // Enable foreign key constraints
-      await sqliteTest.connector.executeSQL('PRAGMA foreign_keys = ON');
+      await sqliteTest.connector.executeSQL('PRAGMA foreign_keys = ON', {});
       
       // Try to insert an order with non-existent user_id
       await expect(
-        sqliteTest.connector.executeSQL('INSERT INTO orders (user_id, total) VALUES (9999, 100.00)')
+        sqliteTest.connector.executeSQL('INSERT INTO orders (user_id, total) VALUES (9999, 100.00)', {})
       ).rejects.toThrow();
 
       // Verify foreign key is working by inserting valid order
-      await sqliteTest.connector.executeSQL('INSERT INTO orders (user_id, total) VALUES (1, 200.00)');
+      await sqliteTest.connector.executeSQL('INSERT INTO orders (user_id, total) VALUES (1, 200.00)', {});
       const result = await sqliteTest.connector.executeSQL(
-        'SELECT COUNT(*) as count FROM orders WHERE total = 200.00'
+        'SELECT COUNT(*) as count FROM orders WHERE total = 200.00', {}
       );
       expect(Number(result.rows[0].count)).toBe(1);
     });
@@ -271,18 +271,18 @@ describe('SQLite Connector Integration Tests', () => {
         // Create an FTS (Full-Text Search) virtual table if FTS is available
         await sqliteTest.connector.executeSQL(`
           CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(title, content)
-        `);
+        `, {});
 
         await sqliteTest.connector.executeSQL(`
           INSERT INTO docs_fts (title, content) VALUES 
           ('First Document', 'This is the content of the first document'),
           ('Second Document', 'This document contains different content'),
           ('Third Document', 'Another document with more content')
-        `);
+        `, {});
 
         const result = await sqliteTest.connector.executeSQL(`
           SELECT title FROM docs_fts WHERE docs_fts MATCH 'content' ORDER BY title
-        `);
+        `, {});
         
         expect(result.rows.length).toBeGreaterThan(0);
         expect(result.rows.some(row => row.title.includes('Document'))).toBe(true);
@@ -290,6 +290,112 @@ describe('SQLite Connector Integration Tests', () => {
         // FTS not available in this SQLite build, skip this test
         console.log('FTS extension not available in this SQLite build, skipping FTS test');
       }
+    });
+
+    it('should respect maxRows limit for SELECT queries', async () => {
+      // Test basic SELECT with maxRows limit
+      const result1 = await sqliteTest.connector.executeSQL(
+        'SELECT * FROM users ORDER BY id',
+        { maxRows: 2 }
+      );
+      
+      expect(result1.rows).toHaveLength(2);
+      expect(result1.rows[0].name).toBe('John Doe');
+      expect(result1.rows[1].name).toBe('Jane Smith');
+    });
+
+    it('should respect existing LIMIT clause when lower than maxRows', async () => {
+      // Test when existing LIMIT is lower than maxRows
+      const result = await sqliteTest.connector.executeSQL(
+        'SELECT * FROM users ORDER BY id LIMIT 1',
+        { maxRows: 3 }
+      );
+      
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0].name).toBe('John Doe');
+    });
+
+    it('should use maxRows when existing LIMIT is higher', async () => {
+      // Test when existing LIMIT is higher than maxRows
+      const result = await sqliteTest.connector.executeSQL(
+        'SELECT * FROM users ORDER BY id LIMIT 10',
+        { maxRows: 2 }
+      );
+      
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0].name).toBe('John Doe');
+      expect(result.rows[1].name).toBe('Jane Smith');
+    });
+
+    it('should not affect non-SELECT queries', async () => {
+      // Test that maxRows doesn't affect INSERT/UPDATE/DELETE
+      const insertResult = await sqliteTest.connector.executeSQL(
+        "INSERT INTO users (name, email, age) VALUES ('MaxRows Test', 'maxrows@example.com', 25)",
+        { maxRows: 1 }
+      );
+      
+      expect(insertResult.rows).toHaveLength(0); // INSERTs don't return rows
+      
+      // Verify the insert worked
+      const selectResult = await sqliteTest.connector.executeSQL(
+        "SELECT * FROM users WHERE email = 'maxrows@example.com'",
+        {}
+      );
+      expect(selectResult.rows).toHaveLength(1);
+      expect(selectResult.rows[0].name).toBe('MaxRows Test');
+    });
+
+    it('should handle maxRows with complex queries', async () => {
+      // Test maxRows with JOIN queries
+      const result = await sqliteTest.connector.executeSQL(`
+        SELECT u.name, o.total 
+        FROM users u 
+        JOIN orders o ON u.id = o.user_id 
+        ORDER BY o.total DESC
+      `, { maxRows: 2 });
+      
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0]).toHaveProperty('name');
+      expect(result.rows[0]).toHaveProperty('total');
+    });
+
+    it('should not apply maxRows to CTE queries (WITH clause)', async () => {
+      // Test that maxRows is not applied to CTE queries (WITH clause)
+      const result = await sqliteTest.connector.executeSQL(`
+        WITH user_summary AS (
+          SELECT name, age FROM users WHERE age IS NOT NULL
+        )
+        SELECT * FROM user_summary ORDER BY age
+      `, { maxRows: 2 });
+      
+      // Should return all rows since WITH queries are not limited anymore
+      expect(result.rows.length).toBeGreaterThan(2);
+      expect(result.rows[0]).toHaveProperty('name');
+      expect(result.rows[0]).toHaveProperty('age');
+    });
+
+    it('should handle maxRows in multi-statement execution', async () => {
+      // Test maxRows with multiple statements where some are SELECT
+      const result = await sqliteTest.connector.executeSQL(`
+        INSERT INTO users (name, email, age) VALUES ('Multi Test 1', 'multi1@test.com', 30);
+        SELECT name FROM users WHERE email LIKE '%@test.com' ORDER BY name;
+        INSERT INTO users (name, email, age) VALUES ('Multi Test 2', 'multi2@test.com', 35);
+      `, { maxRows: 1 });
+      
+      // Should return only 1 row from the SELECT statement
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0].name).toBe('Multi Test 1');
+    });
+
+    it('should ignore maxRows when not specified', async () => {
+      // Test without maxRows - should return all rows
+      const result = await sqliteTest.connector.executeSQL(
+        'SELECT * FROM users ORDER BY id',
+        {}
+      );
+      
+      // Should return all users (at least the original 3 plus any added in previous tests)
+      expect(result.rows.length).toBeGreaterThanOrEqual(3);
     });
   });
 });
