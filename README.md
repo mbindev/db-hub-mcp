@@ -43,12 +43,6 @@ DBHub is a universal database gateway implementing the Model Context Protocol (M
       MCP Clients           MCP Server             Databases
 ```
 
-## Demo HTTP Endpoint
-
-https://demo.dbhub.ai/message connects a [sample employee database](https://github.com/bytebase/employee-sample-database). You can point Cursor or MCP Inspector to it to see it in action.
-
-![mcp-inspector](https://raw.githubusercontent.com/bytebase/dbhub/main/resources/images/mcp-inspector.webp)
-
 ## Supported Matrix
 
 ### Database Resources
@@ -510,6 +504,8 @@ The project includes pre-commit hooks to run tests automatically before each com
 2. This ensures the test suite runs automatically whenever you create a commit, preventing commits that would break tests.
 
 ### Debug with [MCP Inspector](https://github.com/modelcontextprotocol/inspector)
+
+![mcp-inspector](https://raw.githubusercontent.com/bytebase/dbhub/main/resources/images/mcp-inspector.webp)
 
 #### stdio
 
