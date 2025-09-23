@@ -308,9 +308,14 @@ npx @bytebase/dbhub  --demo
 ```
 
 > [!WARNING]
-> If your user/password contains special characters, you need to escape them first. (e.g. `pass#word` should be escaped as `pass%23word`)
+> If your user/password contains special characters, you have two options:
+>
+> 1. Escape them in the DSN (e.g. `pass#word` should be escaped as `pass%23word`)
+> 2. Use the individual database parameters method below (recommended)
 
-For real databases, a Database Source Name (DSN) is required. You can provide this in several ways:
+For real databases, you can configure the database connection in two ways:
+
+#### Method 1: Database Source Name (DSN)
 
 - **Command line argument** (highest priority):
 
@@ -331,6 +336,45 @@ For real databases, a Database Source Name (DSN) is required. You can provide th
   ```
   DSN=postgres://user:password@localhost:5432/dbname?sslmode=disable
   ```
+
+#### Method 2: Individual Database Parameters
+
+If your password contains special characters that would break URL parsing, use individual environment variables instead:
+
+- **Environment variables**:
+
+  ```bash
+  export DB_TYPE=postgres
+  export DB_HOST=localhost
+  export DB_PORT=5432
+  export DB_USER=myuser
+  export DB_PASSWORD='my@complex:password/with#special&chars'
+  export DB_NAME=mydatabase
+  npx @bytebase/dbhub
+  ```
+
+- **Environment file**:
+  ```
+  DB_TYPE=postgres
+  DB_HOST=localhost
+  DB_PORT=5432
+  DB_USER=myuser
+  DB_PASSWORD=my@complex:password/with#special&chars
+  DB_NAME=mydatabase
+  ```
+
+**Supported DB_TYPE values**: `postgres`, `mysql`, `mariadb`, `sqlserver`, `sqlite`
+
+**Default ports** (when DB_PORT is omitted):
+
+- PostgreSQL: `5432`
+- MySQL/MariaDB: `3306`
+- SQL Server: `1433`
+
+**For SQLite**: Only `DB_TYPE=sqlite` and `DB_NAME=/path/to/database.db` are required.
+
+> [!TIP]
+> Use the individual parameter method when your password contains special characters like `@`, `:`, `/`, `#`, `&`, `=` that would break DSN parsing.
 
 > [!WARNING]
 > When running in Docker, use `host.docker.internal` instead of `localhost` to connect to databases running on your host machine. For example: `mysql://user:password@host.docker.internal:3306/dbname`
@@ -368,20 +412,26 @@ Extra query parameters:
 
 ### Command line options
 
-| Option         | Environment Variable | Description                                                      | Default                      |
-| -------------- | -------------------- | ---------------------------------------------------------------- | ---------------------------- |
-| dsn            | `DSN`                | Database connection string                                       | Required if not in demo mode |
-| transport      | `TRANSPORT`          | Transport mode: `stdio` or `http`                                | `stdio`                      |
-| port           | `PORT`               | HTTP server port (only applicable when using `--transport=http`) | `8080`                       |
-| readonly       | `READONLY`           | Restrict SQL execution to read-only operations                   | `false`                      |
-| max-rows       | N/A                  | Limit the number of rows returned from SELECT queries            | No limit                     |
-| demo           | N/A                  | Run in demo mode with sample employee database                   | `false`                      |
-| ssh-host       | `SSH_HOST`           | SSH server hostname for tunnel connection                        | N/A                          |
-| ssh-port       | `SSH_PORT`           | SSH server port                                                  | `22`                         |
-| ssh-user       | `SSH_USER`           | SSH username                                                     | N/A                          |
-| ssh-password   | `SSH_PASSWORD`       | SSH password (for password authentication)                       | N/A                          |
-| ssh-key        | `SSH_KEY`            | Path to SSH private key file                                     | N/A                          |
-| ssh-passphrase | `SSH_PASSPHRASE`     | Passphrase for SSH private key                                   | N/A                          |
+| Option         | Environment Variable | Description                                                           | Default                      |
+| -------------- | -------------------- | --------------------------------------------------------------------- | ---------------------------- |
+| dsn            | `DSN`                | Database connection string                                            | Required if not in demo mode |
+| N/A            | `DB_TYPE`            | Database type: `postgres`, `mysql`, `mariadb`, `sqlserver`, `sqlite`  | N/A                          |
+| N/A            | `DB_HOST`            | Database server hostname (not needed for SQLite)                      | N/A                          |
+| N/A            | `DB_PORT`            | Database server port (uses default if omitted, not needed for SQLite) | N/A                          |
+| N/A            | `DB_USER`            | Database username (not needed for SQLite)                             | N/A                          |
+| N/A            | `DB_PASSWORD`        | Database password (not needed for SQLite)                             | N/A                          |
+| N/A            | `DB_NAME`            | Database name or SQLite file path                                     | N/A                          |
+| transport      | `TRANSPORT`          | Transport mode: `stdio` or `http`                                     | `stdio`                      |
+| port           | `PORT`               | HTTP server port (only applicable when using `--transport=http`)      | `8080`                       |
+| readonly       | `READONLY`           | Restrict SQL execution to read-only operations                        | `false`                      |
+| max-rows       | N/A                  | Limit the number of rows returned from SELECT queries                 | No limit                     |
+| demo           | N/A                  | Run in demo mode with sample employee database                        | `false`                      |
+| ssh-host       | `SSH_HOST`           | SSH server hostname for tunnel connection                             | N/A                          |
+| ssh-port       | `SSH_PORT`           | SSH server port                                                       | `22`                         |
+| ssh-user       | `SSH_USER`           | SSH username                                                          | N/A                          |
+| ssh-password   | `SSH_PASSWORD`       | SSH password (for password authentication)                            | N/A                          |
+| ssh-key        | `SSH_KEY`            | Path to SSH private key file                                          | N/A                          |
+| ssh-passphrase | `SSH_PASSPHRASE`     | Passphrase for SSH private key                                        | N/A                          |
 
 The demo mode uses an in-memory SQLite database loaded with the [sample employee database](https://github.com/bytebase/dbhub/tree/main/resources/employee-sqlite) that includes tables for employees, departments, titles, salaries, department employees, and department managers. The sample database includes SQL scripts for table creation, data loading, and testing.
 
