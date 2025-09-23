@@ -33,11 +33,13 @@ const parseToolResponse = (response: any) => {
 describe('execute-sql tool', () => {
   let mockConnector: Connector;
   const mockGetCurrentConnector = vi.mocked(ConnectorManager.getCurrentConnector);
+  const mockGetCurrentExecuteOptions = vi.mocked(ConnectorManager.getCurrentExecuteOptions);
   const mockIsReadOnlyMode = vi.mocked(isReadOnlyMode);
 
   beforeEach(() => {
     mockConnector = createMockConnector('sqlite');
     mockGetCurrentConnector.mockReturnValue(mockConnector);
+    mockGetCurrentExecuteOptions.mockReturnValue({});
     mockIsReadOnlyMode.mockReturnValue(false);
   });
 
@@ -56,7 +58,7 @@ describe('execute-sql tool', () => {
       expect(parsedResult.success).toBe(true);
       expect(parsedResult.data.rows).toEqual([{ id: 1, name: 'test' }]);
       expect(parsedResult.data.count).toBe(1);
-      expect(mockConnector.executeSQL).toHaveBeenCalledWith('SELECT * FROM users');
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith('SELECT * FROM users', {});
     });
 
     it('should handle execution errors', async () => {
@@ -82,7 +84,7 @@ describe('execute-sql tool', () => {
       const parsedResult = parseToolResponse(result);
 
       expect(parsedResult.success).toBe(true);
-      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql, {});
     });
   });
 
@@ -111,7 +113,7 @@ describe('execute-sql tool', () => {
       const parsedResult = parseToolResponse(result);
 
       expect(parsedResult.success).toBe(true);
-      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql, {});
     });
 
     it('should reject single INSERT statement in read-only mode', async () => {
@@ -150,7 +152,7 @@ describe('execute-sql tool', () => {
       const parsedResult = parseToolResponse(result);
 
       expect(parsedResult.success).toBe(true);
-      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql, {});
     });
 
     it('should allow SELECT with multi-line comment in read-only mode', async () => {
@@ -163,7 +165,7 @@ describe('execute-sql tool', () => {
       const parsedResult = parseToolResponse(result);
 
       expect(parsedResult.success).toBe(true);
-      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql, {});
     });
 
     it('should handle multiple statements with comments in read-only mode', async () => {
@@ -176,7 +178,7 @@ describe('execute-sql tool', () => {
       const parsedResult = parseToolResponse(result);
 
       expect(parsedResult.success).toBe(true);
-      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql, {});
     });
 
     it('should reject INSERT with comment in read-only mode', async () => {
@@ -202,7 +204,7 @@ describe('execute-sql tool', () => {
       const parsedResult = parseToolResponse(result);
 
       expect(parsedResult.success).toBe(true);
-      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql, {});
     });
 
     it('should handle inline comments correctly', async () => {
@@ -215,7 +217,7 @@ describe('execute-sql tool', () => {
       const parsedResult = parseToolResponse(result);
 
       expect(parsedResult.success).toBe(true);
-      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql);
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith(sql, {});
     });
   });
 
@@ -229,7 +231,7 @@ describe('execute-sql tool', () => {
       const parsedResult = parseToolResponse(result);
 
       expect(parsedResult.success).toBe(true);
-      expect(mockConnector.executeSQL).toHaveBeenCalledWith('');
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith('', {});
     });
 
     it('should handle SQL with only semicolons and whitespace', async () => {
@@ -240,7 +242,7 @@ describe('execute-sql tool', () => {
       const parsedResult = parseToolResponse(result);
 
       expect(parsedResult.success).toBe(true);
-      expect(mockConnector.executeSQL).toHaveBeenCalledWith('   ;  ;  ; ');
+      expect(mockConnector.executeSQL).toHaveBeenCalledWith('   ;  ;  ; ', {});
     });
   });
 });
