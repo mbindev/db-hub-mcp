@@ -161,10 +161,13 @@ export function buildDSNFromEnvParams(): { dsn: string; source: string } | null 
     }
   }
 
-  // URL encode components to handle special characters
-  const encodedUser = encodeURIComponent(dbUser!);
-  const encodedPassword = encodeURIComponent(dbPassword!);
-  const encodedDbName = encodeURIComponent(dbName!);
+  // At this point, dbUser, dbPassword, and dbName are guaranteed to be non-null due to earlier checks.
+  const user: string = dbUser as string;
+  const password: string = dbPassword as string;
+  const dbNameStr: string = dbName as string;
+  const encodedUser = encodeURIComponent(user);
+  const encodedPassword = encodeURIComponent(password);
+  const encodedDbName = encodeURIComponent(dbNameStr);
 
   // Construct DSN
   const protocol = dbType.toLowerCase() === 'postgresql' ? 'postgres' : dbType.toLowerCase();
