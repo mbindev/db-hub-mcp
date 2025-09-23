@@ -95,6 +95,29 @@ docker run --rm --init \
    --demo
 ```
 
+**Docker Compose Setup:**
+
+If you're using Docker Compose for development, add DBHub to your `docker-compose.yml`:
+
+```yaml
+dbhub:
+  image: bytebase/dbhub:latest
+  container_name: dbhub
+  ports:
+    - "8080:8080"
+  environment:
+    - DBHUB_LOG_LEVEL=info
+  command:
+    - --transport
+    - http
+    - --port
+    - "8080"
+    - --dsn
+    - "postgres://user:password@database:5432/dbname"
+  depends_on:
+    - database
+```
+
 ### NPM
 
 ```bash
@@ -174,6 +197,74 @@ cursor://anysphere.cursor-deeplink/mcp/install?name=dbhub&config=eyJjb21tYW5kIjo
 
 - Cursor supports both `stdio` and `http`.
 - Follow [Cursor MCP guide](https://docs.cursor.com/context/model-context-protocol) and make sure to use [Agent](https://docs.cursor.com/chat/agent) mode.
+
+### VSCode + Copilot
+
+Check https://code.visualstudio.com/docs/copilot/customization/mcp-servers
+
+VSCode with GitHub Copilot can connect to DBHub via both `stdio` and `http` transports. This enables AI agents to interact with your development database through a secure interface.
+
+- VSCode supports both `stdio` and `http` transports
+- Configure MCP server in `.vscode/mcp.json`:
+
+**Stdio Transport:**
+
+```json
+{
+  "servers": {
+    "dbhub": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@bytebase/dbhub",
+        "--transport",
+        "stdio",
+        "--dsn",
+        "postgres://user:password@localhost:5432/dbname"
+      ]
+    }
+  },
+  "inputs": []
+}
+```
+
+**HTTP Transport:**
+
+```json
+{
+  "servers": {
+    "dbhub": {
+      "url": "http://localhost:8080/message",
+      "type": "http"
+    }
+  },
+  "inputs": []
+}
+```
+
+**Copilot Instructions:**
+
+You can provide Copilot with context by creating `.github/copilot-instructions.md`:
+
+```markdown
+## Database Access
+
+This project provides an MCP server (DBHub) for secure SQL access to the development database.
+
+AI agents can execute SQL queries. In read-only mode (recommended for production):
+
+- `SELECT * FROM users LIMIT 5;`
+- `SHOW TABLES;`
+- `DESCRIBE table_name;`
+
+In read-write mode (development/testing):
+
+- `INSERT INTO users (name, email) VALUES ('John', 'john@example.com');`
+- `UPDATE users SET status = 'active' WHERE id = 1;`
+- `CREATE TABLE test_table (id INT PRIMARY KEY);`
+
+Use `--readonly` flag to restrict to read-only operations for safety.
+```
 
 ## Usage
 
