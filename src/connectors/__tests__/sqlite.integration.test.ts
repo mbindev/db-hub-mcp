@@ -17,7 +17,14 @@ class SQLiteTestContainer implements TestContainer {
   async stop(): Promise<void> {
     // Clean up the temporary database file
     if (this.dbPath !== ':memory:' && fs.existsSync(this.dbPath)) {
-      fs.unlinkSync(this.dbPath);
+      try {
+        // Add a small delay to ensure any file handles are fully released
+        await new Promise(resolve => setTimeout(resolve, 10));
+        fs.unlinkSync(this.dbPath);
+      } catch (error) {
+        // Log but don't throw - cleanup failures shouldn't break tests
+        console.warn(`Failed to cleanup database file ${this.dbPath}:`, error);
+      }
     }
   }
 }
