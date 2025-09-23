@@ -119,7 +119,7 @@ export function buildDSNFromEnvParams(): { dsn: string; source: string } | null 
 
   // For SQLite, only DB_TYPE and DB_NAME are required
   if (dbType?.toLowerCase() === 'sqlite') {
-    if (!dbType || !dbName) {
+    if (!dbName) {
       return null;
     }
   } else {
