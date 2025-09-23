@@ -105,6 +105,81 @@ export function isReadOnlyMode(): boolean {
 }
 
 /**
+ * Build DSN from individual environment variables
+ * Returns the constructed DSN or null if required variables are missing
+ */
+export function buildDSNFromEnvParams(): { dsn: string; source: string } | null {
+  // Check for required environment variables
+  const dbType = process.env.DB_TYPE;
+  const dbHost = process.env.DB_HOST;
+  const dbUser = process.env.DB_USER;
+  const dbPassword = process.env.DB_PASSWORD;
+  const dbName = process.env.DB_NAME;
+  const dbPort = process.env.DB_PORT;
+
+  // For SQLite, only DB_TYPE and DB_NAME are required
+  if (dbType?.toLowerCase() === 'sqlite') {
+    if (!dbName) {
+      return null;
+    }
+  } else {
+    // For other databases, require all essential parameters
+    if (!dbType || !dbHost || !dbUser || !dbPassword || !dbName) {
+      return null;
+    }
+  }
+
+  // Validate supported database types
+  const supportedTypes = ['postgres', 'postgresql', 'mysql', 'mariadb', 'sqlserver', 'sqlite'];
+  if (!supportedTypes.includes(dbType.toLowerCase())) {
+    throw new Error(`Unsupported DB_TYPE: ${dbType}. Supported types: ${supportedTypes.join(', ')}`);
+  }
+
+  // Determine default port based on database type
+  let port = dbPort;
+  if (!port) {
+    switch (dbType.toLowerCase()) {
+      case 'postgres':
+      case 'postgresql':
+        port = '5432';
+        break;
+      case 'mysql':
+      case 'mariadb':
+        port = '3306';
+        break;
+      case 'sqlserver':
+        port = '1433';
+        break;
+      case 'sqlite':
+        // SQLite doesn't use host/port, handle differently
+        return {
+          dsn: `sqlite:///${dbName}`,
+          source: 'individual environment variables'
+        };
+      default:
+        throw new Error(`Unknown database type for port determination: ${dbType}`);
+    }
+  }
+
+  // At this point, dbUser, dbPassword, and dbName are guaranteed to be non-null due to earlier checks.
+  const user: string = dbUser as string;
+  const password: string = dbPassword as string;
+  const dbNameStr: string = dbName as string;
+  const encodedUser = encodeURIComponent(user);
+  const encodedPassword = encodeURIComponent(password);
+  const encodedDbName = encodeURIComponent(dbNameStr);
+
+  // Construct DSN
+  const protocol = dbType.toLowerCase() === 'postgresql' ? 'postgres' : dbType.toLowerCase();
+  const dsn = `${protocol}://${encodedUser}:${encodedPassword}@${dbHost}:${port}/${encodedDbName}`;
+
+  return {
+    dsn,
+    source: 'individual environment variables'
+  };
+}
+
+/**
  * Resolve DSN from command line args, environment variables, or .env files
  * Returns the DSN and its source, or null if not found
  */
@@ -132,10 +207,29 @@ export function resolveDSN(): { dsn: string; source: string; isDemo?: boolean } 
     return { dsn: process.env.DSN, source: "environment variable" };
   }
 
-  // 3. Try loading from .env files
+  // 3. Check for individual DB parameters from environment
+  const envParamsResult = buildDSNFromEnvParams();
+  if (envParamsResult) {
+    return envParamsResult;
+  }
+
+  // 4. Try loading from .env files
   const loadedEnvFile = loadEnvFiles();
+
+  // 5. Check for DSN in .env file
   if (loadedEnvFile && process.env.DSN) {
     return { dsn: process.env.DSN, source: `${loadedEnvFile} file` };
+  }
+
+  // 6. Check for individual DB parameters from .env file
+  if (loadedEnvFile) {
+    const envFileParamsResult = buildDSNFromEnvParams();
+    if (envFileParamsResult) {
+      return {
+        dsn: envFileParamsResult.dsn,
+        source: `${loadedEnvFile} file (individual parameters)`
+      };
+    }
   }
 
   return null;
