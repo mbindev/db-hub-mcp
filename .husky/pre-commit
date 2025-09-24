@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 
+# Ensure we use the correct Node.js version by setting PATH
+export PATH="/opt/homebrew/bin:$PATH"
+
 # Run lint-staged to check only the files that are being committed
 pnpm lint-staged
 
