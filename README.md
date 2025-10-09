@@ -281,6 +281,40 @@ In read-only mode, only [readonly SQL operations](https://github.com/bytebase/db
 
 This provides an additional layer of security when connecting to production databases.
 
+### Suffix Tool Names with ID
+
+You can suffix tool names with a custom ID using the `--id` flag or `ID` environment variable. This is useful when running multiple DBHub instances (e.g., in Cursor) to allow the client to route queries to the correct database.
+
+**Example configuration for multiple databases in Cursor:**
+
+```json
+{
+  "mcpServers": {
+    "dbhub-prod": {
+      "command": "npx",
+      "args": ["-y", "@bytebase/dbhub"],
+      "env": {
+        "ID": "prod",
+        "DSN": "postgres://user:password@prod-host:5432/dbname"
+      }
+    },
+    "dbhub-staging": {
+      "command": "npx",
+      "args": ["-y", "@bytebase/dbhub"],
+      "env": {
+        "ID": "staging",
+        "DSN": "mysql://user:password@staging-host:3306/dbname"
+      }
+    }
+  }
+}
+```
+
+With this configuration:
+
+- Production database tools: `execute_sql_prod`
+- Staging database tools: `execute_sql_staging`
+
 ### Row Limiting
 
 You can limit the number of rows returned from SELECT queries using the `--max-rows` parameter. This helps prevent accidentally retrieving too much data from large tables:
@@ -517,6 +551,7 @@ Extra query parameters:
 | readonly       | `READONLY`           | Restrict SQL execution to read-only operations                        | `false`                      |
 | max-rows       | N/A                  | Limit the number of rows returned from SELECT queries                 | No limit                     |
 | demo           | N/A                  | Run in demo mode with sample employee database                        | `false`                      |
+| id             | `ID`                 | Instance identifier to suffix tool names (for multi-instance)         | N/A                          |
 | ssh-host       | `SSH_HOST`           | SSH server hostname for tunnel connection                             | N/A                          |
 | ssh-port       | `SSH_PORT`           | SSH server port                                                       | `22`                         |
 | ssh-user       | `SSH_USER`           | SSH username                                                          | N/A                          |
