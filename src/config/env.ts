@@ -331,6 +331,27 @@ export function redactDSN(dsn: string): string {
 }
 
 /**
+ * Resolve ID from command line args or environment variables
+ * Returns ID or null if not provided
+ */
+export function resolveId(): { id: string; source: string } | null {
+  // Get command line arguments
+  const args = parseCommandLineArgs();
+
+  // 1. Check command line arguments first (highest priority)
+  if (args.id) {
+    return { id: args.id, source: "command line argument" };
+  }
+
+  // 2. Check environment variables
+  if (process.env.ID) {
+    return { id: process.env.ID, source: "environment variable" };
+  }
+
+  return null;
+}
+
+/**
  * Resolve SSH tunnel configuration from command line args or environment variables
  * Returns SSH config or null if no SSH options are provided
  */

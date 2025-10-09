@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { buildDSNFromEnvParams, resolveDSN } from '../env.js';
+import { buildDSNFromEnvParams, resolveDSN, resolveId } from '../env.js';
 
 describe('Environment Configuration Tests', () => {
   // Store original env values to restore after tests
@@ -14,6 +14,7 @@ describe('Environment Configuration Tests', () => {
     delete process.env.DB_PASSWORD;
     delete process.env.DB_NAME;
     delete process.env.DSN;
+    delete process.env.ID;
   });
 
   afterEach(() => {
@@ -327,6 +328,47 @@ describe('Environment Configuration Tests', () => {
       const result = buildDSNFromEnvParams();
 
       expect(result?.dsn).toBe('postgres://user:pass@localhost:5432/db');
+    });
+  });
+
+  describe('resolveId', () => {
+    it('should return null when ID is not provided', () => {
+      const result = resolveId();
+
+      expect(result).toBeNull();
+    });
+
+    it('should resolve ID from environment variable', () => {
+      process.env.ID = 'prod';
+
+      const result = resolveId();
+
+      expect(result).toEqual({
+        id: 'prod',
+        source: 'environment variable'
+      });
+    });
+
+    it('should handle different ID formats', () => {
+      process.env.ID = 'staging-db-01';
+
+      const result = resolveId();
+
+      expect(result).toEqual({
+        id: 'staging-db-01',
+        source: 'environment variable'
+      });
+    });
+
+    it('should handle numeric IDs as strings', () => {
+      process.env.ID = '123';
+
+      const result = resolveId();
+
+      expect(result).toEqual({
+        id: '123',
+        source: 'environment variable'
+      });
     });
   });
 });

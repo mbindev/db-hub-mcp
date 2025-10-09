@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 
 import { ConnectorManager } from "./connectors/manager.js";
 import { ConnectorRegistry } from "./connectors/interface.js";
-import { resolveDSN, resolveTransport, resolvePort, isDemoMode, redactDSN, isReadOnlyMode } from "./config/env.js";
+import { resolveDSN, resolveTransport, resolvePort, isDemoMode, redactDSN, isReadOnlyMode, resolveId } from "./config/env.js";
 import { getSqliteInMemorySetupSql } from "./config/demo-loader.js";
 import { registerResources } from "./resources/index.js";
 import { registerTools } from "./tools/index.js";
@@ -50,6 +50,10 @@ v${version}${modeText} - Universal Database MCP Server
  */
 export async function main(): Promise<void> {
   try {
+    // Resolve ID from command line args (for Cursor multi-instance support)
+    const idData = resolveId();
+    const id = idData?.id;
+
     // Resolve DSN from command line args, environment variables, or .env files
     const dsnData = resolveDSN();
 
@@ -85,9 +89,9 @@ See documentation for more details on configuring database connections.
 
       // Register resources, tools, and prompts
       registerResources(server);
-      registerTools(server);
+      registerTools(server, id);
       registerPrompts(server);
-      
+
       return server;
     };
 
@@ -97,6 +101,9 @@ See documentation for more details on configuring database connections.
     const connectorManager = new ConnectorManager();
     console.error(`Connecting with DSN: ${redactDSN(dsnData.dsn)}`);
     console.error(`DSN source: ${dsnData.source}`);
+    if (idData) {
+      console.error(`ID: ${idData.id} (from ${idData.source})`);
+    }
 
     // If in demo mode, load the employee database
     if (dsnData.isDemo) {
